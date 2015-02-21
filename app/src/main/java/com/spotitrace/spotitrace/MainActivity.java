@@ -14,6 +14,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.os.Build;
+import android.widget.AdapterView;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
@@ -32,6 +33,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import android.widget.ListView;
 
 
 public class MainActivity extends ActionBarActivity {
@@ -43,9 +45,10 @@ public class MainActivity extends ActionBarActivity {
         setContentView(R.layout.activity_main);
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new PlaceholderFragment())
+                    .add(R.id.container, new PlaceholderFragment(),"Fragment1")
                     .commit();
         }
+        songs = new ArrayList<Song>();
 
         // Move to fragment?
         //SongFetcher fetcher = new SongFetcher();
@@ -75,10 +78,21 @@ public class MainActivity extends ActionBarActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    public List<Song> getSongs(){
+        return songs;
+    }
+
+    public void setSongs(List<Song> songs){
+        this.songs = songs;
+    }
+
     /**
      * A placeholder fragment containing a simple view.
      */
     public static class PlaceholderFragment extends Fragment {
+
+        MainActivity ma;
+        ListView listView;
 
         public PlaceholderFragment() {
         }
@@ -88,28 +102,44 @@ public class MainActivity extends ActionBarActivity {
                                  Bundle savedInstanceState) {
             View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
+
             return rootView;
+        }
+
+        @Override
+        public void onStart(){
+            super.onStart();
+            ma = (MainActivity)getActivity();
+            listView = (ListView)getView().findViewById(R.id.list);
+
+        }
+
+        private void handleSongsList(List<Song> songs) {
+            ma.setSongs(songs);
+
+            ma.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    ImageListAdapter adapter = new ImageListAdapter(ma, ma.getSongs());
+                    listView.setAdapter(adapter);
+
+                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
+                            // Start song in Spotify
+                            Song song = ma.getSongs().get(position); // The file path of the clicked image
+                            String uri = song.uri;
+                            Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri));
+                            startActivity(launcher);
+                        }
+                    });
+                }
+            });
         }
     }
 
-    private void handleSongsList(List<Song> songs) {
-        this.songs = songs;
 
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                for(Song song : MainActivity.this.songs) {
-                    Toast.makeText(MainActivity.this, song.name, Toast.LENGTH_SHORT).show();
-                }
-
-                // Start song in Spotify
-                Song song = MainActivity.this.songs.get(MainActivity.this.songs.size()-1);
-                String uri = song.uri;
-                Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri) );
-                startActivity(launcher);
-            }
-        });
-    }
 
     private void failedLoadingSongs() {
         runOnUiThread(new Runnable() {
@@ -147,7 +177,9 @@ public class MainActivity extends ActionBarActivity {
                         List<Song> songs = new ArrayList<Song>();
                         songs = Arrays.asList(gson.fromJson(reader, Song[].class));
                         content.close();
-                        handleSongsList(songs);
+
+                        PlaceholderFragment fragment = (PlaceholderFragment)getSupportFragmentManager().findFragmentByTag("Fragment1");
+                        fragment.handleSongsList(songs);
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);
                         failedLoadingSongs();

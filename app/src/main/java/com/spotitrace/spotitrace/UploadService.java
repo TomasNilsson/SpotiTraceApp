@@ -26,7 +26,8 @@ import java.util.List;
 public class UploadService extends IntentService {
     private static final String TAG = "UploadService";
     private static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/songs";
-    private String lastSongUri = ""; // Used to prevent duplicates (the song is detected twice)
+    // TODO: This needs to be solved in another way. Used to prevent duplicates (the song is detected twice).
+    private String lastSongUri = "";
 
     /**
      * An IntentService must always have a constructor that calls the super constructor. The

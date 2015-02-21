@@ -51,8 +51,8 @@ public class MainActivity extends ActionBarActivity {
         songs = new ArrayList<Song>();
 
         // Move to fragment?
-        //SongFetcher fetcher = new SongFetcher();
-        //fetcher.execute();
+        SongFetcher fetcher = new SongFetcher();
+        fetcher.execute();
     }
 
 

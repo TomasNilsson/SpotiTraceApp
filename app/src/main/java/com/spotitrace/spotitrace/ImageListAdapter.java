@@ -1,0 +1,85 @@
+package com.spotitrace.spotitrace;
+
+/**
+ * Created by Johannes on 2/20/2015.
+ */
+import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ArrayAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
+
+import java.io.InputStream;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ImageListAdapter extends ArrayAdapter<Song> {
+    private LayoutInflater inflater;
+    private final Activity context;
+    private final List<Song> songs;
+
+    public ImageListAdapter(Activity context, List<Song> songs) {
+        super(context, R.layout.list_item, songs);
+        this.context = context;
+        this.songs = songs;
+        this.inflater = context.getLayoutInflater();
+    }
+
+    @Override
+    public View getView(int position, View view, ViewGroup parent) {
+
+        View rowView = view;
+        // view is null when new row is needed
+        if (rowView == null) {
+            rowView= inflater.inflate(R.layout.list_item, null, true);
+        }
+
+        TextView userTxtTitle = (TextView) rowView.findViewById(R.id.userName);
+        TextView songTxtTile = (TextView) rowView.findViewById(R.id.songInfo);
+        ImageView imageView = (ImageView) rowView.findViewById(R.id.img);
+
+
+        Song song = songs.get(position);
+        // Set text to the song and artist.
+        userTxtTitle.setText(song.name+ " by "+ song.artist);
+        songTxtTile.setText("Album: " + song.album);
+
+        // Load a scaled down version of the image.
+        new ImageDownloader(imageView).execute(song.imageUrl);
+        return rowView;
+    }
+}
+
+class ImageDownloader extends AsyncTask<String, Void, Bitmap> {
+    ImageView bmImage;
+
+    public ImageDownloader(ImageView bmImage) {
+        this.bmImage = bmImage;
+    }
+
+    protected Bitmap doInBackground(String... urls) {
+        String url = urls[0];
+        if( url == null){
+            url = "http://djazz.mine.nu/apps/eqbeats/img/album-placeholder.png"; //Use local image instead.
+        }
+        Bitmap mIcon = null;
+        try {
+            InputStream in = new java.net.URL(url).openStream();
+            mIcon = BitmapFactory.decodeStream(in);
+        } catch (Exception e) {
+            Log.e("Error", e.getMessage());
+        }
+        return mIcon;
+    }
+
+    protected void onPostExecute(Bitmap result) {
+        bmImage.setImageBitmap(result);
+    }
+}

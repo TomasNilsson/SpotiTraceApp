@@ -48,8 +48,8 @@ public class MainActivity extends ActionBarActivity {
         }
 
         // Move to fragment?
-        SongFetcher fetcher = new SongFetcher();
-        fetcher.execute();
+        //SongFetcher fetcher = new SongFetcher();
+        //fetcher.execute();
     }
 
 
@@ -157,7 +157,7 @@ public class MainActivity extends ActionBarActivity {
                     failedLoadingSongs();
                 }
             } catch(Exception ex) {
-                Log.e(TAG, "Failed to send HTTP POST request due to: " + ex);
+                Log.e(TAG, "Failed to send HTTP GET request due to: " + ex);
                 failedLoadingSongs();
             }
             return null;

@@ -10,19 +10,31 @@
         android:paddingRight="10dp" />
 
     <TextView
-        android:id="@+id/userName"
+        android:id="@+id/songTitle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toRightOf="@id/img"
         android:paddingTop="10dp"
         android:paddingBottom="2dp"
-        android:textSize="20sp" />
+        android:textSize="16sp" />
+
     <TextView
-        android:id="@+id/songInfo"
+        android:id="@+id/songArtist"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_toRightOf="@id/img"
-        android:layout_below="@id/userName"
-        android:paddingBottom="10dp"
+        android:layout_below="@id/songTitle"
+        android:paddingBottom="2dp"
         android:textSize="16sp" />
+
+    <TextView
+        android:id="@+id/userName"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_toRightOf="@id/img"
+        android:layout_below="@id/songArtist"
+        android:paddingTop="2dp"
+        android:paddingBottom="2dp"
+        android:textSize="12sp" />
+
 </RelativeLayout>

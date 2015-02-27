@@ -1,6 +1,7 @@
 package com.spotitrace.spotitrace;
 
 import android.content.Intent;
+import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
@@ -19,8 +20,11 @@ import android.os.Build;
 import android.widget.AdapterView;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -37,9 +41,17 @@ import java.util.Arrays;
 import java.util.List;
 import android.widget.ListView;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
+import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
+import com.google.android.gms.location.LocationServices;
 
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener {
     private List<Song> songs;
+    private GoogleApiClient mApiClient;
+    protected Location mLastLocation;
+    protected final String TAG="MainActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -50,6 +62,9 @@ public class MainActivity extends ActionBarActivity {
                     .commit();
         }
         songs = new ArrayList<Song>();
+
+
+        buildGoogleApiClient();
 
         // Move to fragment?
         SongFetcher fetcher = new SongFetcher();
@@ -86,6 +101,52 @@ public class MainActivity extends ActionBarActivity {
     public SongFetcher getFetcher(){
         return new SongFetcher();
     }
+
+    public void update(){
+        getFetcher().execute();
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
+    }
+
+    protected synchronized void buildGoogleApiClient(){
+        mApiClient = new GoogleApiClient.Builder(this)
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+    }
+
+    @Override
+    public void onStart(){
+        super.onStart();
+        mApiClient.connect();
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+        if(mApiClient.isConnected()){
+            mApiClient.disconnect();
+        }
+    }
+
+    @Override
+    public void onConnected(Bundle connectionHint){
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
+        Toast.makeText(this, "Latitude ="+mLastLocation.getLatitude()+" Longitude= "+ mLastLocation.getLongitude(), Toast.LENGTH_LONG).show();
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult result){
+        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
+    }
+
+    @Override
+    public void onConnectionSuspended(int cause){
+        Log.i(TAG, "Connection suspended");
+        mApiClient.connect();
+    }
+
+
 
 
     public void setSongs(List<Song> songs){
@@ -128,7 +189,7 @@ public class MainActivity extends ActionBarActivity {
                         @Override
                         public void run(){
                             swipeView.setRefreshing(false);
-                            ma.getFetcher().execute();
+                            ma.update();
                         }
                     }, 3000);
                 }

@@ -3,6 +3,8 @@ package com.spotitrace.spotitrace;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Handler;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
@@ -38,7 +40,6 @@ import android.widget.ListView;
 
 public class MainActivity extends ActionBarActivity {
     private List<Song> songs;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,6 +83,11 @@ public class MainActivity extends ActionBarActivity {
         return songs;
     }
 
+    public SongFetcher getFetcher(){
+        return new SongFetcher();
+    }
+
+
     public void setSongs(List<Song> songs){
         this.songs = songs;
     }
@@ -111,6 +117,22 @@ public class MainActivity extends ActionBarActivity {
             super.onStart();
             ma = (MainActivity)getActivity();
             listView = (ListView)getView().findViewById(R.id.list);
+
+            final SwipeRefreshLayout swipeView = (SwipeRefreshLayout)getView().findViewById(R.id.swipe_container);
+            swipeView.setColorScheme(android.R.color.holo_blue_dark, android.R.color.holo_blue_light, android.R.color.holo_green_light, android.R.color.holo_green_light);
+            swipeView.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener(){
+                @Override
+                public void onRefresh(){
+                    swipeView.setRefreshing(true);
+                    ( new Handler()).postDelayed( new Runnable(){
+                        @Override
+                        public void run(){
+                            swipeView.setRefreshing(false);
+                            ma.getFetcher().execute();
+                        }
+                    }, 3000);
+                }
+            });
 
         }
 

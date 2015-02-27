@@ -30,4 +30,5 @@ dependencies {
     compile 'com.spotify.sdk:spotifysdk:1.0.0-beta8@aar' // NOTE: Version must match!
     compile 'com.android.support:appcompat-v7:21.0.3'
     compile files('libs/gson-2.3.1.jar')
+    compile 'com.google.android.gms:play-services:6.5.87'
 }

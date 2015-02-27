@@ -42,14 +42,16 @@ public class ImageListAdapter extends ArrayAdapter<Song> {
         }
 
         TextView userTxtTitle = (TextView) rowView.findViewById(R.id.userName);
-        TextView songTxtTile = (TextView) rowView.findViewById(R.id.songInfo);
+        TextView songTxtTile = (TextView) rowView.findViewById(R.id.songTitle);
+        TextView artistTextTile = (TextView) rowView.findViewById(R.id.songArtist);
         ImageView imageView = (ImageView) rowView.findViewById(R.id.img);
 
 
         Song song = songs.get(position);
         // Set text to the song and artist.
-        userTxtTitle.setText(song.name+ " by "+ song.artist);
-        songTxtTile.setText("Album: " + song.album);
+        userTxtTitle.setText("UserName");
+        artistTextTile.setText(song.artist);
+        songTxtTile.setText(song.name);
 
         // Load a scaled down version of the image.
         new ImageDownloader(imageView).execute(song.imageUrl);

@@ -19,6 +19,12 @@ import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.spotify.sdk.android.Spotify;
+import com.spotify.sdk.android.authentication.AuthenticationClient;
+import com.spotify.sdk.android.authentication.AuthenticationRequest;
+import com.spotify.sdk.android.authentication.AuthenticationResponse;
+import com.spotify.sdk.android.playback.Config;
+import com.spotify.sdk.android.playback.ConnectionStateCallback;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -38,6 +44,11 @@ import android.widget.ListView;
 
 public class MainActivity extends ActionBarActivity {
     private List<Song> songs;
+    private static final int REQUEST_CODE = 1337;
+    private static final String CLIENT_ID = "d3d6beb8d2a04634bd0eeec107c11e18";
+    private static final String REDIRECT_URI = "spotitrace-login://callback";
+    private String accessToken;
+    private String username;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,13 +59,36 @@ public class MainActivity extends ActionBarActivity {
                     .add(R.id.container, new PlaceholderFragment(),"Fragment1")
                     .commit();
         }
+
         songs = new ArrayList<Song>();
 
-        // Move to fragment?
-        SongFetcher fetcher = new SongFetcher();
-        fetcher.execute();
+        AuthenticationRequest.Builder builder = new AuthenticationRequest.Builder(CLIENT_ID,
+                AuthenticationResponse.Type.TOKEN,
+                REDIRECT_URI);
+        //builder.setScopes(new String[]{"user-read-private", "streaming"});
+        builder.setScopes(new String[]{"user-read-private"});
+        AuthenticationRequest request = builder.build();
+
+        AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
     }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent intent) {
+        super.onActivityResult(requestCode, resultCode, intent);
+
+        // Check if result comes from the correct activity
+        if (requestCode == REQUEST_CODE) {
+            AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, intent);
+            if (response.getType() == AuthenticationResponse.Type.TOKEN) {
+                accessToken = response.getAccessToken();
+                Log.d("MainActivity", "User logged in");
+                UserFetcher userFetcher = new UserFetcher();
+                userFetcher.execute();
+                SongFetcher fetcher = new SongFetcher();
+                fetcher.execute();
+            }
+        }
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -195,4 +229,47 @@ public class MainActivity extends ActionBarActivity {
             return null;
         }
     }
+
+    private class UserFetcher extends AsyncTask<Void, Void, String> {
+        private static final String TAG = "UserFetcher";
+        public static final String SERVER_URL = "https://api.spotify.com/v1/me";
+
+        @Override
+        protected String doInBackground(Void... params) {
+            try {
+                //Create an HTTP client
+                HttpClient client = new DefaultHttpClient();
+                HttpGet request = new HttpGet(SERVER_URL);
+                request.setHeader("Authorization", "Bearer "+ accessToken);
+
+                //Perform the request and check the status code
+                HttpResponse response = client.execute(request);
+                StatusLine statusLine = response.getStatusLine();
+                if(statusLine.getStatusCode() == 200) {
+                    HttpEntity entity = response.getEntity();
+                    InputStream content = entity.getContent();
+
+                    try {
+                        //Read the server response and attempt to parse it as JSON
+                        Reader reader = new InputStreamReader(content);
+
+                        GsonBuilder gsonBuilder = new GsonBuilder();
+                        Gson gson = gsonBuilder.create();
+                        SpotifyUser user = gson.fromJson(reader, SpotifyUser.class);
+                        username = user.id;
+                        content.close();
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Failed to parse JSON due to: " + ex);
+                    }
+                } else {
+                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
+                }
+            } catch(Exception ex) {
+                Log.e(TAG, "Failed to send HTTP GET request due to: " + ex);
+            }
+            return null;
+        }
+    }
+
+
 }

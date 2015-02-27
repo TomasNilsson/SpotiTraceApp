@@ -74,7 +74,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                     .add(R.id.container, new PlaceholderFragment(),"Fragment1")
                     .commit();
         }
-
         songs = new ArrayList<Song>();
 
         AuthenticationRequest.Builder builder = new AuthenticationRequest.Builder(CLIENT_ID,
@@ -99,7 +98,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 Log.d("MainActivity", "User logged in");
                 UserFetcher userFetcher = new UserFetcher();
                 userFetcher.execute();
-                buildGoogleApiClient();
                 SongFetcher fetcher = new SongFetcher();
                 fetcher.execute();
             }
@@ -152,6 +150,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
     @Override
     public void onStart(){
         super.onStart();
+        buildGoogleApiClient();
         mApiClient.connect();
     }
 
@@ -165,6 +164,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
 
     @Override
     public void onConnected(Bundle connectionHint){
+        // TODO: Check if location is activated
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
         Toast.makeText(this, "Latitude ="+mLastLocation.getLatitude()+" Longitude= "+ mLastLocation.getLongitude(), Toast.LENGTH_LONG).show();
     }
@@ -340,6 +340,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                         Gson gson = gsonBuilder.create();
                         SpotifyUser user = gson.fromJson(reader, SpotifyUser.class);
                         username = user.id;
+                        Log.d(TAG, "User: " + username);
                         content.close();
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);

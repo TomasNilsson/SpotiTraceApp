@@ -62,6 +62,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
     private String accessToken;
     private String username;
 
+
     private GoogleApiClient mApiClient;
     protected Location mLastLocation;
     protected final String TAG="MainActivity";

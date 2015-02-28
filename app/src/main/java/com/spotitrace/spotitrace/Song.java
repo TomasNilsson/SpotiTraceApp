@@ -10,17 +10,15 @@ public class Song {
     @Expose
     public String artist;
     @Expose
-    public String album;
-    @Expose
     public String uri;
     @Expose
     @SerializedName("image_url") // Used when the field name does not match the JSON response
     public String imageUrl;
 
-    public Song (String name, String artist, String album, String uri) {
+    public Song (String name, String artist, String album, String uri, String imageUrl) {
         this.name = name;
         this.artist = artist;
-        this.album = album;
         this.uri = uri;
+        this.imageUrl = imageUrl;
     }
 }

@@ -37,6 +37,8 @@ import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 
 import java.io.InputStream;
@@ -97,7 +99,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
             if (response.getType() == AuthenticationResponse.Type.TOKEN) {
                 accessToken = response.getAccessToken();
                 Log.d("MainActivity", "User logged in");
-                UserFetcher userFetcher = new UserFetcher();
+                SpotifyUserFetcher userFetcher = new SpotifyUserFetcher();
                 userFetcher.execute();
                 SongFetcher fetcher = new SongFetcher();
                 fetcher.execute();
@@ -314,8 +316,8 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         }
     }
 
-    private class UserFetcher extends AsyncTask<Void, Void, String> {
-        private static final String TAG = "UserFetcher";
+    private class SpotifyUserFetcher extends AsyncTask<Void, Void, String> {
+        private static final String TAG = "SpotifyUserFetcher";
         public static final String SERVER_URL = "https://api.spotify.com/v1/me";
 
         @Override
@@ -343,6 +345,8 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                         username = user.id;
                         Log.d(TAG, "User: " + username);
                         content.close();
+                        UserUpload userUpload = new UserUpload();
+                        userUpload.execute();
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);
                     }
@@ -356,5 +360,36 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         }
     }
 
+    private class UserUpload extends AsyncTask<Void, Void, String> {
+        private static final String TAG = "User Upload";
+        public static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users";
+
+        @Override
+        protected String doInBackground(Void... params) {
+            try {
+                User user = new User(username, accessToken);
+                Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+                String jsonString = gson.toJson(user);
+
+                //Create an HTTP client
+                HttpClient client = new DefaultHttpClient();
+                HttpPost post = new HttpPost(SERVER_URL);
+                post.setHeader("Content-Type", "application/json; charset=utf-8");
+                post.setHeader("Authorization", "Token token=\"" + accessToken + "\"");
+                post.setEntity(new StringEntity(jsonString));
+                //Perform the request and check the status code
+                HttpResponse response = client.execute(post);
+                StatusLine statusLine = response.getStatusLine();
+                if (statusLine.getStatusCode() == 201) {
+                    Log.d(TAG, "Upload completed");
+                } else {
+                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
+                }
+            } catch(Exception ex) {
+                Log.e(TAG, "Failed to send HTTP POST request due to: " + ex);
+            }
+            return null;
+        }
+    }
 
 }

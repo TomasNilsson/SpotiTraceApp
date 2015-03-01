@@ -1,7 +1,12 @@
 package com.spotitrace.spotitrace;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -49,6 +54,8 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
+
 import android.widget.ListView;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -208,10 +215,16 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
     /**
      * A placeholder fragment containing a simple view.
      */
-    public static class PlaceholderFragment extends Fragment {
-
+    public static class PlaceholderFragment extends Fragment implements SensorEventListener {
+        protected final String TAG="PlaceholderFragment";
         MainActivity ma;
         ListView listView;
+        private SensorManager mSensorManager;
+        private Sensor mAccelerometer;
+
+        private float mAccel; // Acceleration apart from gravity
+        private float mAccelCurrent; // Current acceleration including gravity
+        private float mAccelLast; // Last acceleration including gravity
 
         public PlaceholderFragment() {
         }
@@ -230,6 +243,12 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
             super.onStart();
             ma = (MainActivity)getActivity();
             listView = (ListView)getView().findViewById(R.id.list);
+            // Use accelerometer to detect shaking
+            mSensorManager = (SensorManager) ma.getSystemService(Context.SENSOR_SERVICE);
+            mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+            mAccel = 0.00f;
+            mAccelCurrent = SensorManager.GRAVITY_EARTH;
+            mAccelLast = SensorManager.GRAVITY_EARTH;
 
             final SwipeRefreshLayout swipeView = (SwipeRefreshLayout)getView().findViewById(R.id.swipe_container);
             swipeView.setColorScheme(android.R.color.holo_blue_dark, android.R.color.holo_blue_light, android.R.color.holo_green_light, android.R.color.holo_green_light);
@@ -247,6 +266,53 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 }
             });
 
+        }
+
+        @Override
+        public void onResume() {
+            super.onResume();
+            // Register sensor event listener
+            mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        }
+
+        @Override
+        public void onPause() {
+            super.onPause();
+            // Unregister sensor event listener
+            mSensorManager.unregisterListener(this);
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            // Do something here if sensor accuracy changes.
+        }
+
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            // Detect shaking
+            // (code partially from http://stackoverflow.com/questions/2317428/android-i-want-to-shake-it)
+            float x = event.values[0];
+            float y = event.values[1];
+            float z = event.values[2];
+            mAccelLast = mAccelCurrent;
+            mAccelCurrent = (float) Math.sqrt((double) (x*x + y*y + z*z));
+            float delta = mAccelCurrent - mAccelLast;
+            mAccel = mAccel * 0.9f + delta; // Perform low-cut filter
+            if (mAccel > 10) {
+                startRandomSong(); // Call rolling() method when phone is shaken.
+            }
+        }
+
+        private void startRandomSong() {
+            Log.d(TAG, "Start random song");
+            // Start random song in Spotify
+            Random rng = new Random(); // Generate random numbers
+            List<Song> songs = ma.getSongs();
+            int position = rng.nextInt(songs.size());
+            Song song = ma.getSongs().get(position); // The file path of the clicked image
+            String uri = song.uri;
+            Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri));
+            startActivity(launcher);
         }
 
         private void handleSongsList(List<Song> songs) {

@@ -12,6 +12,8 @@ public class SpotifyReceiver extends BroadcastReceiver{
     public static final String EXTRA_ALBUM = "com.spotitrace.spotitrace.ALBUM";
     public static final String EXTRA_NAME = "com.spotitrace.spotitrace.NAME";
     public static final String EXTRA_URI = "com.spotitrace.spotitrace.URI";
+    // Used to prevent duplicates (the song is detected twice).
+    private String lastSongUri = "";
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -29,13 +31,16 @@ public class SpotifyReceiver extends BroadcastReceiver{
         //Toast.makeText(context, uri, Toast.LENGTH_LONG).show();
         Log.d("SpotifyReceiver", name);
 
-        // use this to start and trigger a service
-        Intent i= new Intent(context, UploadService.class);
-        // potentially add data to the intent
-        i.putExtra(EXTRA_ARTIST, artist);
-        i.putExtra(EXTRA_ALBUM, album);
-        i.putExtra(EXTRA_NAME, name);
-        i.putExtra(EXTRA_URI, uri);
-        context.startService(i);
+        if (!uri.equals(lastSongUri)) {
+            lastSongUri = uri;
+            // use this to start and trigger a service
+            Intent i = new Intent(context, UploadService.class);
+            // potentially add data to the intent
+            i.putExtra(EXTRA_ARTIST, artist);
+            i.putExtra(EXTRA_ALBUM, album);
+            i.putExtra(EXTRA_NAME, name);
+            i.putExtra(EXTRA_URI, uri);
+            context.startService(i);
+        }
     }
 }

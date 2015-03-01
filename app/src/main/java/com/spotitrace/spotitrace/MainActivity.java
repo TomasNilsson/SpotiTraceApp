@@ -1,6 +1,7 @@
 package com.spotitrace.spotitrace;
 
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -40,6 +41,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.protocol.HTTP;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -61,8 +63,9 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
     private static final int REQUEST_CODE = 1337;
     private static final String CLIENT_ID = "d3d6beb8d2a04634bd0eeec107c11e18";
     private static final String REDIRECT_URI = "spotitrace-login://callback";
-    private String accessToken;
+    private static String accessToken;
     private String username;
+    private SpotifyReceiver spotifyReceiver;
 
 
     private GoogleApiClient mApiClient;
@@ -101,8 +104,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 Log.d("MainActivity", "User logged in");
                 SpotifyUserFetcher userFetcher = new SpotifyUserFetcher();
                 userFetcher.execute();
-                SongFetcher fetcher = new SongFetcher();
-                fetcher.execute();
             }
         }
     }
@@ -183,7 +184,21 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         mApiClient.connect();
     }
 
+    private void registerSpotifyReceiver() {
+        IntentFilter filter = new IntentFilter("com.spotify.music.metadatachanged");
+        spotifyReceiver = new SpotifyReceiver();
+        registerReceiver(spotifyReceiver, filter);
+    }
 
+    public static String getAccessToken() {
+        return accessToken;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(spotifyReceiver);
+    }
 
 
     public void setSongs(List<Song> songs){
@@ -280,6 +295,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 //Create an HTTP client
                 HttpClient client = new DefaultHttpClient();
                 HttpGet request = new HttpGet(SERVER_URL);
+                request.setHeader("Authorization", "Token token=\"" + getAccessToken() + "\"");
 
                 //Perform the request and check the status code
                 HttpResponse response = client.execute(request);
@@ -375,13 +391,15 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 HttpClient client = new DefaultHttpClient();
                 HttpPost post = new HttpPost(SERVER_URL);
                 post.setHeader("Content-Type", "application/json; charset=utf-8");
-                post.setHeader("Authorization", "Token token=\"" + accessToken + "\"");
-                post.setEntity(new StringEntity(jsonString));
+                post.setEntity(new StringEntity(jsonString, HTTP.UTF_8));
                 //Perform the request and check the status code
                 HttpResponse response = client.execute(post);
                 StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == 201) {
                     Log.d(TAG, "Upload completed");
+                    registerSpotifyReceiver();
+                    SongFetcher fetcher = new SongFetcher();
+                    fetcher.execute();
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
                 }

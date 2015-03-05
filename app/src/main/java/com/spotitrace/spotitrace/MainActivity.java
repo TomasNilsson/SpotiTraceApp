@@ -11,6 +11,7 @@ import android.location.Location;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
+import android.provider.Settings;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
@@ -66,6 +67,7 @@ import com.google.android.gms.location.LocationServices;
 
 public class MainActivity extends ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener {
     private List<Song> songs;
+    private List<User> users;
     
     private static final int REQUEST_CODE = 1337;
     private static final String CLIENT_ID = "d3d6beb8d2a04634bd0eeec107c11e18";
@@ -76,7 +78,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
 
 
     private GoogleApiClient mApiClient;
-    protected Location mLastLocation;
+    private Location mLastLocation;
     protected final String TAG="MainActivity";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +90,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                     .commit();
         }
         songs = new ArrayList<Song>();
+        users = new ArrayList<User>();
 
         AuthenticationRequest.Builder builder = new AuthenticationRequest.Builder(CLIENT_ID,
                 AuthenticationResponse.Type.TOKEN,
@@ -141,6 +144,10 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         return songs;
     }
 
+    public List<User> getUsers(){
+        return users;
+    }
+
     public SongFetcher getFetcher(){
         return new SongFetcher();
     }
@@ -148,6 +155,9 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
     public void update(){
         getFetcher().execute();
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
+        LocationUploader uploader = new LocationUploader();
+        uploader.execute();
+
     }
 
     protected synchronized void buildGoogleApiClient(){
@@ -177,7 +187,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
     public void onConnected(Bundle connectionHint){
         // TODO: Check if location is activated
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
-        Toast.makeText(this, "Latitude ="+mLastLocation.getLatitude()+" Longitude= "+ mLastLocation.getLongitude(), Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -210,6 +219,10 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
 
     public void setSongs(List<Song> songs){
         this.songs = songs;
+    }
+
+    public void setUsers(List<User> users){
+        this.users= users;
     }
 
     /**
@@ -273,6 +286,13 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
             super.onResume();
             // Register sensor event listener
             mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+            String provider = Settings.Secure.getString(ma.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
+            if(!provider.contains("gps")){
+                Toast.makeText(ma, "Please turn High Accuracy GPS on!", Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                startActivity(intent);
+            }
+
         }
 
         @Override
@@ -307,15 +327,15 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
             Log.d(TAG, "Start random song");
             // Start random song in Spotify
             Random rng = new Random(); // Generate random numbers
-            List<Song> songs = ma.getSongs();
-            int position = rng.nextInt(songs.size());
-            Song song = ma.getSongs().get(position); // The file path of the clicked image
+            List<User> users = ma.getUsers();
+            int position = rng.nextInt(users.size());
+            Song song = ma.getUsers().get(position).song; // The file path of the clicked image
             String uri = song.uri;
             Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri));
             startActivity(launcher);
         }
 
-        private void handleSongsList(List<Song> songs) {
+       /* private void handleSongsList(List<Song> songs) {
             ma.setSongs(songs);
 
             ma.runOnUiThread(new Runnable() {
@@ -337,6 +357,30 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                     });
                 }
             });
+        }*/
+
+        private void handleUsersList(List<User> users){
+            ma.setUsers(users);
+
+            ma.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    ImageListAdapter adapter = new ImageListAdapter(ma, ma.getUsers());
+                    listView.setAdapter(adapter);
+
+                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                        @Override
+                        public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
+                            // Start song in Spotify
+                            Song song = ma.getUsers().get(position).song; // The file path of the clicked image
+                            String uri = song.uri;
+                            Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri));
+                            startActivity(launcher);
+                        }
+                    });
+                }
+            });
         }
     }
 
@@ -349,6 +393,55 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 Toast.makeText(MainActivity.this, "Failed to load Songs. Have a look at LogCat.", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private class UserFetcher extends AsyncTask<Void, Void, String>{
+        private static final String TAG = "UserFetcher";
+        public static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users/nearby";
+        @Override
+        protected String doInBackground(Void... params) {
+            try {
+                //Create an HTTP client
+                HttpClient client = new DefaultHttpClient();
+                HttpGet request = new HttpGet(SERVER_URL);
+                request.setHeader("Authorization", "Token token=\"" + getAccessToken() + "\"");
+
+                //Perform the request and check the status code
+                HttpResponse response = client.execute(request);
+                StatusLine statusLine = response.getStatusLine();
+                if(statusLine.getStatusCode() == 200) {
+                    HttpEntity entity = response.getEntity();
+                    InputStream content = entity.getContent();
+
+                    try {
+                        //Read the server response and attempt to parse it as JSON
+                        Reader reader = new InputStreamReader(content);
+
+                        GsonBuilder gsonBuilder = new GsonBuilder();
+                        Gson gson = gsonBuilder.create();
+                        List<User> users = new ArrayList<User>();
+
+                        users = Arrays.asList(gson.fromJson(reader, User[].class));
+                        Log.d(TAG,""+users.size()+" User="+users.get(0).username+" Bearing= "+users.get(0).bearing);
+                        content.close();
+
+                        PlaceholderFragment fragment = (PlaceholderFragment)getSupportFragmentManager().findFragmentByTag("Fragment1");
+                        fragment.handleUsersList(users);
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Failed to parse JSON due to: " + ex);
+                        failedLoadingSongs();
+                    }
+                } else {
+                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
+                    failedLoadingSongs();
+                }
+            } catch(Exception ex) {
+                Log.e(TAG, "Failed to send HTTP GET request due to: " + ex);
+                failedLoadingSongs();
+            }
+            return null;
+        }
+
     }
 
     private class SongFetcher extends AsyncTask<Void, Void, String> {
@@ -380,8 +473,8 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                         songs = Arrays.asList(gson.fromJson(reader, Song[].class));
                         content.close();
 
-                        PlaceholderFragment fragment = (PlaceholderFragment)getSupportFragmentManager().findFragmentByTag("Fragment1");
-                        fragment.handleSongsList(songs);
+                        //PlaceholderFragment fragment = (PlaceholderFragment)getSupportFragmentManager().findFragmentByTag("Fragment1");
+                        //fragment.handleSongsList(songs);
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);
                         failedLoadingSongs();
@@ -464,7 +557,44 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 if (statusLine.getStatusCode() == 201) {
                     Log.d(TAG, "Upload completed");
                     registerSpotifyReceiver();
-                    SongFetcher fetcher = new SongFetcher();
+                    LocationUploader uploader = new LocationUploader();
+                    uploader.execute();
+                } else {
+                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
+                }
+            } catch(Exception ex) {
+                Log.e(TAG, "Failed to send HTTP POST request due to: " + ex);
+            }
+            return null;
+        }
+    }
+
+    private class LocationUploader extends AsyncTask<Void, Void, String>{
+        private static final String TAG = "Location Upload";
+        public static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/locations";
+
+        @Override
+        protected String doInBackground(Void... params) {
+            try {
+                SpotiTraceLocation location = new SpotiTraceLocation(mLastLocation.getLongitude(), mLastLocation.getLatitude());
+                Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
+                String jsonString = gson.toJson(location);
+
+                //Create an HTTP client
+                HttpClient client = new DefaultHttpClient();
+                HttpPost post = new HttpPost(SERVER_URL);
+                post.setHeader("Content-Type", "application/json; charset=utf-8");
+                post.setHeader("Authorization", "Token token=\"" + MainActivity.getAccessToken() + "\"");
+                post.setEntity(new StringEntity(jsonString, HTTP.UTF_8));
+                //Perform the request and check the status code
+                HttpResponse response = client.execute(post);
+                StatusLine statusLine = response.getStatusLine();
+                if (statusLine.getStatusCode() == 201) {
+                    Log.d(TAG, "Upload completed");
+                    registerSpotifyReceiver();
+                    //SongFetcher fetcher = new SongFetcher();
+                    //fetcher.execute();
+                    UserFetcher fetcher = new UserFetcher();
                     fetcher.execute();
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());

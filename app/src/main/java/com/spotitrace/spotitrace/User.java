@@ -9,6 +9,12 @@ public class User {
     @Expose
     public String token;
 
+    public double distance;
+
+    public double bearing;
+
+    public Song song;
+
     public User (String username, String token) {
         this.username = username;
         this.token = token;

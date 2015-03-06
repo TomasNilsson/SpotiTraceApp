@@ -16,8 +16,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.io.InputStream;
-import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 
 public class ImageListAdapter extends ArrayAdapter<User> {
@@ -52,9 +50,9 @@ public class ImageListAdapter extends ArrayAdapter<User> {
 
         User user = users.get(position);
         if(user.friend) {
-            friendView.setImageResource(R.drawable.friendstar);
+            friendView.setImageResource(R.drawable.friend);
         }else{
-            friendView.setImageResource(R.drawable.nofriendstar);
+            friendView.setImageResource(R.drawable.nofriend);
         }
 
         friendView.setOnClickListener(new ImageView.OnClickListener(){
@@ -64,9 +62,9 @@ public class ImageListAdapter extends ArrayAdapter<User> {
                 User user = users.get(position);
                 friendAdder.handleFriend(position);
                 if(!user.friend) {
-                    friendView.setImageResource(R.drawable.friendstar);
+                    friendView.setImageResource(R.drawable.friend);
                 }else{
-                    friendView.setImageResource(R.drawable.nofriendstar);
+                    friendView.setImageResource(R.drawable.nofriend);
                 }
             }
         });

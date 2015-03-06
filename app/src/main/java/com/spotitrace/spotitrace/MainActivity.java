@@ -31,6 +31,9 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.spotify.sdk.android.Spotify;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
@@ -64,22 +67,31 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 import com.google.android.gms.location.LocationServices;
+import com.spotify.sdk.android.playback.Player;
+import com.spotify.sdk.android.playback.PlayerNotificationCallback;
+import com.spotify.sdk.android.playback.PlayerState;
 
-public class MainActivity extends ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener {
+public class MainActivity extends ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener, PlayerNotificationCallback, ConnectionStateCallback {
     private List<Song> songs;
     private List<User> users;
     
     private static final int REQUEST_CODE = 1337;
     private static final String CLIENT_ID = "d3d6beb8d2a04634bd0eeec107c11e18";
     private static final String REDIRECT_URI = "spotitrace-login://callback";
+    public static final String EXTRA_ARTIST = "com.spotitrace.spotitrace.ARTIST";
+    public static final String EXTRA_ALBUM = "com.spotitrace.spotitrace.ALBUM";
+    public static final String EXTRA_NAME = "com.spotitrace.spotitrace.NAME";
+    public static final String EXTRA_URI = "com.spotitrace.spotitrace.URI";
     private static String accessToken;
     private String username;
+    private Song currentSong;
     private SpotifyReceiver spotifyReceiver;
-
-
+    private User mMasterUser;
     private GoogleApiClient mApiClient;
     private Location mLastLocation;
+    private Player mPlayer;
     protected final String TAG="MainActivity";
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -95,8 +107,9 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         AuthenticationRequest.Builder builder = new AuthenticationRequest.Builder(CLIENT_ID,
                 AuthenticationResponse.Type.TOKEN,
                 REDIRECT_URI);
-        //builder.setScopes(new String[]{"user-read-private", "streaming"});
-        builder.setScopes(new String[]{"user-read-private"});
+        builder.setScopes(new String[]{"user-read-private", "streaming"});
+        // For non-Premium users:
+        //builder.setScopes(new String[]{"user-read-private"});
         AuthenticationRequest request = builder.build();
 
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
@@ -114,6 +127,19 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 Log.d("MainActivity", "User logged in");
                 SpotifyUserFetcher userFetcher = new SpotifyUserFetcher();
                 userFetcher.execute();
+                Config playerConfig = new Config(this, response.getAccessToken(), CLIENT_ID);
+                mPlayer = Spotify.getPlayer(playerConfig, this, new Player.InitializationObserver() {
+                    @Override
+                    public void onInitialized(Player player) {
+                        mPlayer.addConnectionStateCallback(MainActivity.this);
+                        mPlayer.addPlayerNotificationCallback(MainActivity.this);
+                    }
+
+                    @Override
+                    public void onError(Throwable throwable) {
+                        Log.e("MainActivity", "Could not initialize player: " + throwable.getMessage());
+                    }
+                });
             }
         }
     }
@@ -148,12 +174,10 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         return users;
     }
 
-    public SongFetcher getFetcher(){
-        return new SongFetcher();
-    }
-
     public void update(){
-        getFetcher().execute();
+        Log.d(TAG, "update()");
+        UserFetcher fetcher = new UserFetcher();
+        fetcher.execute();
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
         LocationUploader uploader = new LocationUploader();
         uploader.execute();
@@ -210,8 +234,65 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         return accessToken;
     }
 
+    private void startSong() {
+        MasterUserUploader masterUserUploader = new MasterUserUploader();
+        masterUserUploader.execute();
+        currentSong = mMasterUser.song; // The file path of the clicked image
+        mPlayer.play(currentSong.uri);
+        // Start in Spotify app
+        //Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(song.uri));
+        //startActivity(launcher);
+    }
+
+    @Override
+    public void onLoggedIn() {
+        Log.d("MainActivity", "User logged in");
+    }
+
+    @Override
+    public void onLoggedOut() {
+        Log.d("MainActivity", "User logged out");
+    }
+
+    @Override
+    public void onLoginFailed(Throwable error) {
+        Log.d("MainActivity", "Login failed");
+    }
+
+    @Override
+    public void onTemporaryError() {
+        Log.d("MainActivity", "Temporary error occurred");
+    }
+
+    @Override
+    public void onConnectionMessage(String message) {
+        Log.d("MainActivity", "Received connection message: " + message);
+    }
+
+    @Override
+    public void onPlaybackEvent(EventType eventType, PlayerState playerState) {
+        Log.d("MainActivity", "Playback event received: " + eventType.name());
+        if (eventType == EventType.TRACK_END) {
+            update();
+        } else if (eventType == EventType.TRACK_START) {
+            currentSong = mMasterUser.song;
+            Intent i = new Intent(this, UploadService.class);
+            // potentially add data to the intent
+            i.putExtra(EXTRA_ARTIST, currentSong.artist);
+            i.putExtra(EXTRA_NAME, currentSong.name);
+            i.putExtra(EXTRA_URI, currentSong.uri);
+            this.startService(i);
+        }
+    }
+
+    @Override
+    public void onPlaybackError(ErrorType errorType, String errorDetails) {
+        Log.d("MainActivity", "Playback error received: " + errorType.name());
+    }
+
     @Override
     protected void onDestroy() {
+        Spotify.destroyPlayer(this);
         super.onDestroy();
         unregisterReceiver(spotifyReceiver);
     }
@@ -329,10 +410,8 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
             Random rng = new Random(); // Generate random numbers
             List<User> users = ma.getUsers();
             int position = rng.nextInt(users.size());
-            Song song = ma.getUsers().get(position).song; // The file path of the clicked image
-            String uri = song.uri;
-            Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri));
-            startActivity(launcher);
+            ma.mMasterUser = users.get(position);
+            ma.startSong();
         }
 
        /* private void handleSongsList(List<Song> songs) {
@@ -361,6 +440,19 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
 
         private void handleUsersList(List<User> users){
             ma.setUsers(users);
+            if (ma.mMasterUser != null) {
+                for (User user:users) {
+                    if (user.id == ma.mMasterUser.id) {
+                        if (!user.song.uri.equals(ma.mMasterUser.song.uri)) {
+                            ma.mPlayer.clearQueue();
+                            ma.mPlayer.queue(user.song.uri);
+                            Log.d(TAG, user.song.name + " added to queue.");
+                        }
+                        ma.mMasterUser = user;
+                        break;
+                    }
+                }
+            }
 
             ma.runOnUiThread(new Runnable() {
                 @Override
@@ -373,10 +465,8 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                         @Override
                         public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
                             // Start song in Spotify
-                            Song song = ma.getUsers().get(position).song; // The file path of the clicked image
-                            String uri = song.uri;
-                            Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri));
-                            startActivity(launcher);
+                            ma.mMasterUser = ma.getUsers().get(position);
+                            ma.startSong();
                         }
                     });
                 }
@@ -591,11 +681,42 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == 201) {
                     Log.d(TAG, "Upload completed");
-                    registerSpotifyReceiver();
-                    //SongFetcher fetcher = new SongFetcher();
-                    //fetcher.execute();
                     UserFetcher fetcher = new UserFetcher();
                     fetcher.execute();
+                } else {
+                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
+                }
+            } catch(Exception ex) {
+                Log.e(TAG, "Failed to send HTTP POST request due to: " + ex);
+            }
+            return null;
+        }
+    }
+
+    private class MasterUserUploader extends AsyncTask<Void, Void, String>{
+        private static final String TAG = "MasterUser Upload";
+        public static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users/master_user";
+
+        @Override
+        protected String doInBackground(Void... params) {
+            try {
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.add("id", new JsonPrimitive(mMasterUser.id));
+                Gson gson = new GsonBuilder().create();
+                String jsonString = gson.toJson(jsonObject);
+                Log.d(TAG, jsonString);
+
+                //Create an HTTP client
+                HttpClient client = new DefaultHttpClient();
+                HttpPost post = new HttpPost(SERVER_URL);
+                post.setHeader("Content-Type", "application/json; charset=utf-8");
+                post.setHeader("Authorization", "Token token=\"" + MainActivity.getAccessToken() + "\"");
+                post.setEntity(new StringEntity(jsonString, HTTP.UTF_8));
+                //Perform the request and check the status code
+                HttpResponse response = client.execute(post);
+                StatusLine statusLine = response.getStatusLine();
+                if (statusLine.getStatusCode() == 200) {
+                    Log.d(TAG, "Upload completed");
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
                 }

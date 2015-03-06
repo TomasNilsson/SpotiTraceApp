@@ -31,6 +31,8 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.spotify.sdk.android.Spotify;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
@@ -65,7 +67,7 @@ import com.google.android.gms.common.api.GoogleApiClient.ConnectionCallbacks;
 import com.google.android.gms.common.api.GoogleApiClient.OnConnectionFailedListener;
 import com.google.android.gms.location.LocationServices;
 
-public class MainActivity extends ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener {
+public class MainActivity extends ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener, FriendAdder {
     private List<Song> songs;
     private List<User> users;
     
@@ -223,6 +225,13 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
 
     public void setUsers(List<User> users){
         this.users= users;
+    }
+
+    @Override
+    public void handleFriend(int position){
+        User user = users.get(position);
+        FriendUserUploader FUU = new FriendUserUploader( user.id, user.friend);
+        FUU.execute();
     }
 
     /**
@@ -422,7 +431,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                         List<User> users = new ArrayList<User>();
 
                         users = Arrays.asList(gson.fromJson(reader, User[].class));
-                        Log.d(TAG,""+users.size()+" User="+users.get(0).username+" Bearing= "+users.get(0).bearing);
                         content.close();
 
                         PlaceholderFragment fragment = (PlaceholderFragment)getSupportFragmentManager().findFragmentByTag("Fragment1");
@@ -604,6 +612,49 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
             }
             return null;
         }
+    }
+
+    private class FriendUserUploader extends AsyncTask<Void, Void, String>{
+        private static final String TAG = "Friend User Uploader";
+        public String SERVER_URL;
+        private long id;
+        public FriendUserUploader(long id, boolean friend){
+            this.id =id;
+            if(friend){
+                SERVER_URL = "http://spotitrace.herokuapp.com/api/friendships/remove";
+            }else{
+                SERVER_URL = "http://spotitrace.herokuapp.com/api/friendships";
+            }
+        }
+
+        @Override
+        protected String doInBackground(Void... params) {
+            try {
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.add("id", new JsonPrimitive(id));
+                Gson gson = new GsonBuilder().create();
+                String jsonString = gson.toJson(jsonObject);
+                Log.d(TAG, jsonString);
+                //Create an HTTP client
+                HttpClient client = new DefaultHttpClient();
+                HttpPost post = new HttpPost(SERVER_URL);
+                post.setHeader("Content-Type", "application/json; charset=utf-8");
+                post.setHeader("Authorization", "Token token=\"" + MainActivity.getAccessToken() + "\"");
+                post.setEntity(new StringEntity(jsonString, HTTP.UTF_8));
+                //Perform the request and check the status code
+                HttpResponse response = client.execute(post);
+                StatusLine statusLine = response.getStatusLine();
+                if (statusLine.getStatusCode() == 200 || statusLine.getStatusCode() == 201) {
+                    Log.d(TAG, "Upload completed");
+                } else {
+                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
+                }
+            } catch (Exception ex) {
+                Log.e(TAG, "Failed to send HTTP POST request due to: " + ex);
+            }
+            return null;
+        }
+
     }
 
 }

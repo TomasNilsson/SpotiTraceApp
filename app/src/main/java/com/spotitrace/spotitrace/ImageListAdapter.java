@@ -24,16 +24,18 @@ public class ImageListAdapter extends ArrayAdapter<User> {
     private LayoutInflater inflater;
     private final Activity context;
     private final List<User> users;
+    private FriendAdder friendAdder;
 
     public ImageListAdapter(Activity context, List<User> users) {
         super(context, R.layout.list_item, users);
         this.context = context;
         this.users = users;
         this.inflater = context.getLayoutInflater();
+        friendAdder = (MainActivity)context;
     }
 
     @Override
-    public View getView(int position, View view, ViewGroup parent) {
+    public View getView(final int position, View view, ViewGroup parent) {
 
         View rowView = view;
         // view is null when new row is needed
@@ -45,9 +47,30 @@ public class ImageListAdapter extends ArrayAdapter<User> {
         TextView songTxtTile = (TextView) rowView.findViewById(R.id.songTitle);
         TextView artistTextTile = (TextView) rowView.findViewById(R.id.songArtist);
         ImageView imageView = (ImageView) rowView.findViewById(R.id.img);
+        final ImageView friendView = (ImageView) rowView.findViewById(R.id.friend);
 
 
         User user = users.get(position);
+        if(user.friend) {
+            friendView.setImageResource(R.drawable.friendstar);
+        }else{
+            friendView.setImageResource(R.drawable.nofriendstar);
+        }
+
+        friendView.setOnClickListener(new ImageView.OnClickListener(){
+
+            @Override
+            public void onClick(View v){
+                User user = users.get(position);
+                friendAdder.handleFriend(position);
+                if(!user.friend) {
+                    friendView.setImageResource(R.drawable.friendstar);
+                }else{
+                    friendView.setImageResource(R.drawable.nofriendstar);
+                }
+            }
+        });
+
         // Set text to the song and artist.
         userTxtTitle.setText(user.username +" "+(double)Math.round(user.distance*100)/100+" km away.");
         artistTextTile.setText(user.song.artist);
@@ -57,6 +80,7 @@ public class ImageListAdapter extends ArrayAdapter<User> {
         new ImageDownloader(imageView).execute(user.song.imageUrl);
         return rowView;
     }
+
 }
 
 class ImageDownloader extends AsyncTask<String, Void, Bitmap> {

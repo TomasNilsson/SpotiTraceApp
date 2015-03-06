@@ -15,6 +15,8 @@ public class User {
 
     public Song song;
 
+    public boolean friend;
+
     public User (String username, String token) {
         this.username = username;
         this.token = token;

@@ -30,7 +30,6 @@ public class SpotifyReceiver extends BroadcastReceiver{
         }*/
         //Toast.makeText(context, uri, Toast.LENGTH_LONG).show();
         Log.d("SpotifyReceiver", name);
-
         if (!uri.equals(lastSongUri)) {
             lastSongUri = uri;
             // use this to start and trigger a service

@@ -36,5 +36,12 @@
         android:paddingTop="2dp"
         android:paddingBottom="2dp"
         android:textSize="12sp" />
+    <ImageView
+        android:id="@+id/friend"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_toRightOf="@id/userName"
+        android:layout_centerVertical="true"
+        android:layout_alignParentRight="true"/>
 
 </RelativeLayout>

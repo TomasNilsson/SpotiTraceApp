@@ -15,7 +15,7 @@ public class Song {
     @SerializedName("image_url") // Used when the field name does not match the JSON response
     public String imageUrl;
 
-    public Song (String name, String artist, String album, String uri, String imageUrl) {
+    public Song (String name, String artist, String uri, String imageUrl) {
         this.name = name;
         this.artist = artist;
         this.uri = uri;

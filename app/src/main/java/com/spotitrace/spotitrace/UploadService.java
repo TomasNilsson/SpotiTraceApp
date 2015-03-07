@@ -31,7 +31,6 @@ public class UploadService extends IntentService {
     private String songImgUrl;
     private String name;
     private String artist;
-    private String album;
     private String uri;
     /**
      * An IntentService must always have a constructor that calls the super constructor. The
@@ -49,7 +48,7 @@ public class UploadService extends IntentService {
 
         //TODO: Fix fulhack.
 
-        Song song = new Song(name, artist, album, uri, songImgUrl);
+        Song song = new Song(name, artist, uri, songImgUrl);
         Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
         String jsonString = gson.toJson(song);
 
@@ -79,7 +78,6 @@ public class UploadService extends IntentService {
         uri = intent.getStringExtra(SpotifyReceiver.EXTRA_URI);
         name = intent.getStringExtra(SpotifyReceiver.EXTRA_NAME);
         artist = intent.getStringExtra(SpotifyReceiver.EXTRA_ARTIST);
-        album = intent.getStringExtra(SpotifyReceiver.EXTRA_ALBUM);
         SpotifySongFetcher SF = new SpotifySongFetcher(uri, this);
         SF.execute();
         // Request image_url from Spotify? Or fix this server side?

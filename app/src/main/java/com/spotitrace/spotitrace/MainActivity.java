@@ -1,23 +1,34 @@
 package com.spotitrace.spotitrace;
 
+import android.support.v4.app.FragmentManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.res.Configuration;
+import android.content.res.TypedArray;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.location.Location;
 import android.net.Uri;
+import android.nfc.NdefMessage;
+import android.nfc.NdefRecord;
+import android.nfc.NfcAdapter;
+import android.nfc.NfcEvent;
 import android.os.AsyncTask;
 import android.os.Handler;
+import android.os.Parcelable;
 import android.provider.Settings;
+import android.support.v7.app.ActionBarDrawerToggle;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.Fragment;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -25,6 +36,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.os.Build;
 import android.widget.AdapterView;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.GoogleApiClient;
@@ -70,40 +83,136 @@ import com.google.android.gms.location.LocationServices;
 import com.spotify.sdk.android.playback.Player;
 import com.spotify.sdk.android.playback.PlayerNotificationCallback;
 import com.spotify.sdk.android.playback.PlayerState;
+import com.spotitrace.spotitrace.adapter.NavDrawerListAdapter;
+import com.spotitrace.spotitrace.model.NavDrawerItem;
 
-public class MainActivity extends ActionBarActivity implements ConnectionCallbacks, OnConnectionFailedListener, PlayerNotificationCallback, ConnectionStateCallback, FriendAdder {
-    private List<Song> songs;
+public class MainActivity extends ActionBarActivity
+        implements ConnectionCallbacks, OnConnectionFailedListener, PlayerNotificationCallback, ConnectionStateCallback, FriendAdder {
+    private DrawerLayout mDrawerLayout;
+    private ListView mDrawerList;
+    private ActionBarDrawerToggle mDrawerToggle;
+
+    // nav drawer title
+    private CharSequence mDrawerTitle;
+
+    // used to store app title
+    private CharSequence mTitle;
+
+    // slide menu items
+    private String[] navMenuTitles;
+    private TypedArray navMenuIcons;
+
+    private ArrayList<NavDrawerItem> navDrawerItems;
+    private NavDrawerListAdapter adapter;
+
     private List<User> users;
     
     private static final int REQUEST_CODE = 1337;
     private static final String CLIENT_ID = "d3d6beb8d2a04634bd0eeec107c11e18";
     private static final String REDIRECT_URI = "spotitrace-login://callback";
     public static final String EXTRA_ARTIST = "com.spotitrace.spotitrace.ARTIST";
-    public static final String EXTRA_ALBUM = "com.spotitrace.spotitrace.ALBUM";
     public static final String EXTRA_NAME = "com.spotitrace.spotitrace.NAME";
     public static final String EXTRA_URI = "com.spotitrace.spotitrace.URI";
     private static String accessToken;
     private String username;
     private Song currentSong;
     private SpotifyReceiver spotifyReceiver;
-    private User mMasterUser;
+    protected User mMasterUser;
+    protected boolean onlyFriends;
+    protected boolean loggedIn;
     private GoogleApiClient mApiClient;
     private Location mLastLocation;
-    private Player mPlayer;
+    protected Player mPlayer;
     protected final String TAG="MainActivity";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // Action Bar
+        ActionBar actionBar = getSupportActionBar();
+        actionBar.setDisplayShowCustomEnabled(true);
+        actionBar.setDisplayShowTitleEnabled(false);
+
+        LayoutInflater inflator = LayoutInflater.from(this);
+        View v = inflator.inflate(R.layout.action_bar, null);
+
+        actionBar.setCustomView(v);
+
+        // Menu
+        mTitle = mDrawerTitle = getTitle();
+
+        // Load slide menu items
+        navMenuTitles = getResources().getStringArray(R.array.nav_drawer_items);
+
+        // Nav drawer icons from resources
+        navMenuIcons = getResources()
+                .obtainTypedArray(R.array.nav_drawer_icons);
+
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        mDrawerList = (ListView) findViewById(R.id.list_slidermenu);
+
+        navDrawerItems = new ArrayList<NavDrawerItem>();
+
+        // Add nav drawer items to array
+        // Nearby Users
+        navDrawerItems.add(new NavDrawerItem(navMenuTitles[0], navMenuIcons.getResourceId(0, -1)));
+        // My Friends
+        navDrawerItems.add(new NavDrawerItem(navMenuTitles[1], navMenuIcons.getResourceId(1, -1)));
+        // Who Follows Me? Will add a counter here
+        navDrawerItems.add(new NavDrawerItem(navMenuTitles[2], navMenuIcons.getResourceId(2, -1), true, "22"));
+        // Location Search
+        navDrawerItems.add(new NavDrawerItem(navMenuTitles[3], navMenuIcons.getResourceId(3, -1)));
+        // Compass Search
+        navDrawerItems.add(new NavDrawerItem(navMenuTitles[4], navMenuIcons.getResourceId(4, -1)));
+        // NFC Connect
+        navDrawerItems.add(new NavDrawerItem(navMenuTitles[5], navMenuIcons.getResourceId(5, -1)));
+        // Log Out
+        navDrawerItems.add(new NavDrawerItem(navMenuTitles[6], navMenuIcons.getResourceId(6, -1)));
+
+        // Recycle the typed array
+        navMenuIcons.recycle();
+
+        // setting the nav drawer list adapter
+        adapter = new NavDrawerListAdapter(getApplicationContext(),
+                navDrawerItems);
+        mDrawerList.setAdapter(adapter);
+
+        // enabling action bar app icon and behaving it as toggle button
+        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        getSupportActionBar().setHomeButtonEnabled(true);
+
+        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout,
+                R.string.app_name, // nav drawer open - description for accessibility
+                R.string.app_name // nav drawer close - description for accessibility
+        ){
+            public void onDrawerClosed(View view) {
+                setTitle(mTitle);
+                // calling onPrepareOptionsMenu() to show action bar icons
+                invalidateOptionsMenu();
+            }
+
+            public void onDrawerOpened(View drawerView) {
+                setTitle("");
+                // calling onPrepareOptionsMenu() to hide action bar icons
+                invalidateOptionsMenu();
+            }
+        };
+        mDrawerLayout.setDrawerListener(mDrawerToggle);
+        mDrawerList.setOnItemClickListener(new SlideMenuClickListener());
+
         if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .add(R.id.container, new PlaceholderFragment(),"Fragment1")
-                    .commit();
+            // on first time display view for first nav item
+            displayView(0);
         }
-        songs = new ArrayList<Song>();
+
         users = new ArrayList<User>();
 
+        spotifyLogin();
+    }
+
+    public void spotifyLogin() {
         AuthenticationRequest.Builder builder = new AuthenticationRequest.Builder(CLIENT_ID,
                 AuthenticationResponse.Type.TOKEN,
                 REDIRECT_URI);
@@ -144,6 +253,13 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         }
     }
 
+    // Needed for NFC
+    @Override
+    public void onNewIntent(Intent intent) {
+        // onResume gets called after this to handle the intent
+        setIntent(intent);
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -153,35 +269,132 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        // toggle nav drawer on selecting action bar app icon/title
+        if (mDrawerToggle.onOptionsItemSelected(item)) {
             return true;
         }
-
-        return super.onOptionsItemSelected(item);
+        // Handle action bar actions click
+        switch (item.getItemId()) {
+            default:
+                return super.onOptionsItemSelected(item);
+        }
     }
 
-    public List<Song> getSongs(){
-        return songs;
+    /***
+     * Called when invalidateOptionsMenu() is triggered
+     */
+    @Override
+    public boolean onPrepareOptionsMenu(Menu menu) {
+        // if nav drawer is opened, hide the action items
+        // boolean drawerOpen = mDrawerLayout.isDrawerOpen(mDrawerList);
+        // menu.findItem(R.id.action_settings).setVisible(!drawerOpen);
+        return super.onPrepareOptionsMenu(menu);
+    }
+
+    @Override
+    public void setTitle(CharSequence title) {
+        if (title.length() > 0) {
+            mTitle = title;
+        }
+        //getSupportActionBar().setTitle(mTitle);
+        ((TextView) getSupportActionBar().getCustomView().findViewById(R.id.title)).setText(title);
+    }
+
+    /**
+     * When using the ActionBarDrawerToggle, it must be called during
+     * onPostCreate() and onConfigurationChanged()...
+     */
+
+    @Override
+    protected void onPostCreate(Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+        // Sync the toggle state after onRestoreInstanceState has occurred.
+        mDrawerToggle.syncState();
+    }
+
+    @Override
+    public void onConfigurationChanged(Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        // Pass any configuration change to the drawer toggls
+        mDrawerToggle.onConfigurationChanged(newConfig);
+    }
+
+    /**
+     * Slide menu item click listener
+     * */
+    private class SlideMenuClickListener implements
+            ListView.OnItemClickListener {
+        @Override
+        public void onItemClick(AdapterView<?> parent, View view, int position,
+                                long id) {
+            // display view for selected nav drawer item
+            displayView(position);
+        }
+    }
+
+    /**
+     * Diplaying fragment view for selected nav drawer list item
+     * */
+    private void displayView(int position) {
+        // update the main content by replacing fragments
+        Fragment fragment = null;
+        switch (position) {
+            case 0:
+                fragment = new NearbyUsersFragment();
+                break;
+            case 1:
+                fragment = new MyFriendsFragment();
+                break;
+            case 2:
+                fragment = new WhoFollowsMeFragment();
+                break;
+            case 3:
+                fragment = new LocationSearchFragment();
+                break;
+            case 4:
+                fragment = new CompassSearchFragment();
+                break;
+            case 5:
+                fragment = new NfcConnectFragment();
+                break;
+            case 6:
+                AuthenticationClient.logout(this);
+                spotifyLogin();
+                break;
+            default:
+                break;
+        }
+
+        if (fragment != null) {
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            fragmentManager.beginTransaction()
+                    .replace(R.id.frame_container, fragment, "SpotiTraceFragment").commit();
+
+            // update selected item and title, then close the drawer
+            mDrawerList.setItemChecked(position, true);
+            mDrawerList.setSelection(position);
+            setTitle(navMenuTitles[position]);
+            mDrawerLayout.closeDrawer(mDrawerList);
+        } else {
+            // error in creating fragment
+            Log.e("MainActivity", "Error in creating fragment");
+        }
     }
 
     public List<User> getUsers(){
         return users;
     }
 
-    public void update(){
-        Log.d(TAG, "update()");
-        UserFetcher fetcher = new UserFetcher();
-        fetcher.execute();
+    public void update() {
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
         LocationUploader uploader = new LocationUploader();
         uploader.execute();
 
+    }
+
+    public void updateUserList() {
+        UserFetcher fetcher = new UserFetcher(onlyFriends);
+        fetcher.execute();
     }
 
     protected synchronized void buildGoogleApiClient(){
@@ -234,7 +447,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         return accessToken;
     }
 
-    private void startSong() {
+    public void startSong() {
         MasterUserUploader masterUserUploader = new MasterUserUploader();
         masterUserUploader.execute();
         currentSong = mMasterUser.song; // The file path of the clicked image
@@ -247,11 +460,13 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
     @Override
     public void onLoggedIn() {
         Log.d("MainActivity", "User logged in");
+        loggedIn = true;
     }
 
     @Override
     public void onLoggedOut() {
         Log.d("MainActivity", "User logged out");
+        loggedIn = false;
     }
 
     @Override
@@ -297,11 +512,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         unregisterReceiver(spotifyReceiver);
     }
 
-
-    public void setSongs(List<Song> songs){
-        this.songs = songs;
-    }
-
     public void setUsers(List<User> users){
         this.users= users;
     }
@@ -312,176 +522,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
         FriendUserUploader FUU = new FriendUserUploader( user.id, user.friend);
         FUU.execute();
     }
-
-    /**
-     * A placeholder fragment containing a simple view.
-     */
-    public static class PlaceholderFragment extends Fragment implements SensorEventListener {
-        protected final String TAG="PlaceholderFragment";
-        MainActivity ma;
-        ListView listView;
-        private SensorManager mSensorManager;
-        private Sensor mAccelerometer;
-
-        private float mAccel; // Acceleration apart from gravity
-        private float mAccelCurrent; // Current acceleration including gravity
-        private float mAccelLast; // Last acceleration including gravity
-
-        public PlaceholderFragment() {
-        }
-
-        @Override
-        public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                                 Bundle savedInstanceState) {
-            View rootView = inflater.inflate(R.layout.fragment_main, container, false);
-
-
-            return rootView;
-        }
-
-        @Override
-        public void onStart(){
-            super.onStart();
-            ma = (MainActivity)getActivity();
-            listView = (ListView)getView().findViewById(R.id.list);
-            // Use accelerometer to detect shaking
-            mSensorManager = (SensorManager) ma.getSystemService(Context.SENSOR_SERVICE);
-            mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
-            mAccel = 0.00f;
-            mAccelCurrent = SensorManager.GRAVITY_EARTH;
-            mAccelLast = SensorManager.GRAVITY_EARTH;
-
-            final SwipeRefreshLayout swipeView = (SwipeRefreshLayout)getView().findViewById(R.id.swipe_container);
-            swipeView.setColorScheme(android.R.color.holo_blue_dark, android.R.color.holo_blue_light, android.R.color.holo_green_light, android.R.color.holo_green_light);
-            swipeView.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener(){
-                @Override
-                public void onRefresh(){
-                    swipeView.setRefreshing(true);
-                    ( new Handler()).postDelayed( new Runnable(){
-                        @Override
-                        public void run(){
-                            swipeView.setRefreshing(false);
-                            ma.update();
-                        }
-                    }, 3000);
-                }
-            });
-
-        }
-
-        @Override
-        public void onResume() {
-            super.onResume();
-            // Register sensor event listener
-            mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
-            String provider = Settings.Secure.getString(ma.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
-            if(!provider.contains("gps")){
-                Toast.makeText(ma, "Please turn High Accuracy GPS on!", Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                startActivity(intent);
-            }
-
-        }
-
-        @Override
-        public void onPause() {
-            super.onPause();
-            // Unregister sensor event listener
-            mSensorManager.unregisterListener(this);
-        }
-
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int accuracy) {
-            // Do something here if sensor accuracy changes.
-        }
-
-        @Override
-        public void onSensorChanged(SensorEvent event) {
-            // Detect shaking
-            // (code partially from http://stackoverflow.com/questions/2317428/android-i-want-to-shake-it)
-            float x = event.values[0];
-            float y = event.values[1];
-            float z = event.values[2];
-            mAccelLast = mAccelCurrent;
-            mAccelCurrent = (float) Math.sqrt((double) (x*x + y*y + z*z));
-            float delta = mAccelCurrent - mAccelLast;
-            mAccel = mAccel * 0.9f + delta; // Perform low-cut filter
-            if (mAccel > 10) {
-                startRandomSong(); // Call rolling() method when phone is shaken.
-            }
-        }
-
-        private void startRandomSong() {
-            Log.d(TAG, "Start random song");
-            // Start random song in Spotify
-            Random rng = new Random(); // Generate random numbers
-            List<User> users = ma.getUsers();
-            int position = rng.nextInt(users.size());
-            ma.mMasterUser = users.get(position);
-            ma.startSong();
-        }
-
-       /* private void handleSongsList(List<Song> songs) {
-            ma.setSongs(songs);
-
-            ma.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-
-                    ImageListAdapter adapter = new ImageListAdapter(ma, ma.getSongs());
-                    listView.setAdapter(adapter);
-
-                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                        @Override
-                        public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
-                            // Start song in Spotify
-                            Song song = ma.getSongs().get(position); // The file path of the clicked image
-                            String uri = song.uri;
-                            Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(uri));
-                            startActivity(launcher);
-                        }
-                    });
-                }
-            });
-        }*/
-
-        private void handleUsersList(List<User> users){
-            ma.setUsers(users);
-            if (ma.mMasterUser != null) {
-                for (User user:users) {
-                    if (user.id == ma.mMasterUser.id) {
-                        if (!user.song.uri.equals(ma.mMasterUser.song.uri)) {
-                            ma.mPlayer.clearQueue();
-                            ma.mPlayer.queue(user.song.uri);
-                            Log.d(TAG, user.song.name + " added to queue.");
-                        }
-                        ma.mMasterUser = user;
-                        break;
-                    }
-                }
-            }
-
-            ma.runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-
-                    ImageListAdapter adapter = new ImageListAdapter(ma, ma.getUsers());
-                    listView.setAdapter(adapter);
-
-                    listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                        @Override
-                        public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
-                            // Start song in Spotify
-                            ma.mMasterUser = ma.getUsers().get(position);
-                            ma.startSong();
-                        }
-                    });
-                }
-            });
-        }
-    }
-
-
 
     private void failedLoadingSongs() {
         runOnUiThread(new Runnable() {
@@ -494,7 +534,18 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
 
     private class UserFetcher extends AsyncTask<Void, Void, String>{
         private static final String TAG = "UserFetcher";
-        public static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users/nearby";
+        public final String SERVER_URL;
+        boolean onlyFriends;
+
+        private UserFetcher(boolean onlyFriends) {
+            this.onlyFriends = onlyFriends;
+            if (onlyFriends) {
+                SERVER_URL = "http://spotitrace.herokuapp.com/api/friendships";
+            } else {
+                SERVER_URL = "http://spotitrace.herokuapp.com/api/users/nearby";
+            }
+        }
+
         @Override
         protected String doInBackground(Void... params) {
             try {
@@ -521,8 +572,13 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                         users = Arrays.asList(gson.fromJson(reader, User[].class));
                         content.close();
 
-                        PlaceholderFragment fragment = (PlaceholderFragment)getSupportFragmentManager().findFragmentByTag("Fragment1");
-                        fragment.handleUsersList(users);
+                        if (onlyFriends) {
+                            MyFriendsFragment fragment = (MyFriendsFragment)getSupportFragmentManager().findFragmentByTag("SpotiTraceFragment");
+                            fragment.handleUsersList(users);
+                        } else {
+                            NearbyUsersFragment fragment = (NearbyUsersFragment) getSupportFragmentManager().findFragmentByTag("SpotiTraceFragment");
+                            fragment.handleUsersList(users);
+                        }
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);
                         failedLoadingSongs();
@@ -538,53 +594,6 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
             return null;
         }
 
-    }
-
-    private class SongFetcher extends AsyncTask<Void, Void, String> {
-        private static final String TAG = "SongFetcher";
-        public static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/songs";
-
-        @Override
-        protected String doInBackground(Void... params) {
-            try {
-                //Create an HTTP client
-                HttpClient client = new DefaultHttpClient();
-                HttpGet request = new HttpGet(SERVER_URL);
-                request.setHeader("Authorization", "Token token=\"" + getAccessToken() + "\"");
-
-                //Perform the request and check the status code
-                HttpResponse response = client.execute(request);
-                StatusLine statusLine = response.getStatusLine();
-                if(statusLine.getStatusCode() == 200) {
-                    HttpEntity entity = response.getEntity();
-                    InputStream content = entity.getContent();
-
-                    try {
-                        //Read the server response and attempt to parse it as JSON
-                        Reader reader = new InputStreamReader(content);
-
-                        GsonBuilder gsonBuilder = new GsonBuilder();
-                        Gson gson = gsonBuilder.create();
-                        List<Song> songs = new ArrayList<Song>();
-                        songs = Arrays.asList(gson.fromJson(reader, Song[].class));
-                        content.close();
-
-                        //PlaceholderFragment fragment = (PlaceholderFragment)getSupportFragmentManager().findFragmentByTag("Fragment1");
-                        //fragment.handleSongsList(songs);
-                    } catch (Exception ex) {
-                        Log.e(TAG, "Failed to parse JSON due to: " + ex);
-                        failedLoadingSongs();
-                    }
-                } else {
-                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
-                    failedLoadingSongs();
-                }
-            } catch(Exception ex) {
-                Log.e(TAG, "Failed to send HTTP GET request due to: " + ex);
-                failedLoadingSongs();
-            }
-            return null;
-        }
     }
 
     private class SpotifyUserFetcher extends AsyncTask<Void, Void, String> {
@@ -687,8 +696,7 @@ public class MainActivity extends ActionBarActivity implements ConnectionCallbac
                 StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == 201) {
                     Log.d(TAG, "Upload completed");
-                    UserFetcher fetcher = new UserFetcher();
-                    fetcher.execute();
+                    updateUserList();
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
                 }

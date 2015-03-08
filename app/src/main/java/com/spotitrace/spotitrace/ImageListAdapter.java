@@ -50,9 +50,9 @@ public class ImageListAdapter extends ArrayAdapter<User> {
 
         User user = users.get(position);
         if(user.friend) {
-            friendView.setImageResource(R.drawable.friend);
+            friendView.setImageResource(R.drawable.ic_star_friend);
         }else{
-            friendView.setImageResource(R.drawable.nofriend);
+            friendView.setImageResource(R.drawable.ic_star_no_friend);
         }
 
         friendView.setOnClickListener(new ImageView.OnClickListener(){
@@ -62,15 +62,15 @@ public class ImageListAdapter extends ArrayAdapter<User> {
                 User user = users.get(position);
                 friendAdder.handleFriend(position);
                 if(!user.friend) {
-                    friendView.setImageResource(R.drawable.friend);
+                    friendView.setImageResource(R.drawable.ic_star_friend);
                 }else{
-                    friendView.setImageResource(R.drawable.nofriend);
+                    friendView.setImageResource(R.drawable.ic_star_no_friend);
                 }
             }
         });
 
         // Set text to the song and artist.
-        userTxtTitle.setText(user.username +" "+(double)Math.round(user.distance*100)/100+" km away.");
+        userTxtTitle.setText(user.username +", "+(double)Math.round(user.distance*100)/100+" km away");
         artistTextTile.setText(user.song.artist);
         songTxtTile.setText(user.song.name);
 

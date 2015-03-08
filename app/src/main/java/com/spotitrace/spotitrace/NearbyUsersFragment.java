@@ -1,0 +1,167 @@
+package com.spotitrace.spotitrace;
+
+import android.content.Context;
+import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.os.Handler;
+import android.provider.Settings;
+import android.support.v4.app.Fragment;
+import android.os.Bundle;
+import android.support.v4.widget.SwipeRefreshLayout;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.Toast;
+
+import java.util.List;
+import java.util.Random;
+
+public class NearbyUsersFragment extends Fragment implements SensorEventListener {
+    protected final String TAG = "NearbyUsersFragment";
+    MainActivity ma;
+    ListView listView;
+    private SensorManager mSensorManager;
+    private Sensor mAccelerometer;
+
+    private float mAccel; // Acceleration apart from gravity
+    private float mAccelCurrent; // Current acceleration including gravity
+    private float mAccelLast; // Last acceleration including gravity
+
+    public NearbyUsersFragment() {
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container,
+                             Bundle savedInstanceState) {
+
+        View rootView = inflater.inflate(R.layout.fragment_nearby_users, container, false);
+
+        return rootView;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        ma = (MainActivity) getActivity();
+        ma.onlyFriends = false;
+        listView = (ListView) getView().findViewById(R.id.list);
+        if (ma.loggedIn) {
+            ma.update();
+        }
+        // Use accelerometer to detect shaking
+        mSensorManager = (SensorManager) ma.getSystemService(Context.SENSOR_SERVICE);
+        mAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        mAccel = 0.00f;
+        mAccelCurrent = SensorManager.GRAVITY_EARTH;
+        mAccelLast = SensorManager.GRAVITY_EARTH;
+
+        final SwipeRefreshLayout swipeView = (SwipeRefreshLayout) getView().findViewById(R.id.swipe_container);
+        swipeView.setColorScheme(android.R.color.holo_blue_dark, android.R.color.holo_blue_light, android.R.color.holo_green_light, android.R.color.holo_green_light);
+        swipeView.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                swipeView.setRefreshing(true);
+                (new Handler()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        swipeView.setRefreshing(false);
+                        ma.update();
+                    }
+                }, 3000);
+            }
+        });
+
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Register sensor event listener
+        mSensorManager.registerListener(this, mAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        String provider = Settings.Secure.getString(ma.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
+        if (!provider.contains("gps")) {
+            Toast.makeText(ma, "Please turn High Accuracy GPS on!", Toast.LENGTH_LONG).show();
+            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+            startActivity(intent);
+        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        // Unregister sensor event listener
+        mSensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+        // Do something here if sensor accuracy changes.
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        // Detect shaking
+        // (code partially from http://stackoverflow.com/questions/2317428/android-i-want-to-shake-it)
+        float x = event.values[0];
+        float y = event.values[1];
+        float z = event.values[2];
+        mAccelLast = mAccelCurrent;
+        mAccelCurrent = (float) Math.sqrt((double) (x * x + y * y + z * z));
+        float delta = mAccelCurrent - mAccelLast;
+        mAccel = mAccel * 0.9f + delta; // Perform low-cut filter
+        if (mAccel > 10) {
+            startRandomSong(); // Call rolling() method when phone is shaken.
+        }
+    }
+
+    private void startRandomSong() {
+        Log.d(TAG, "Start random song");
+        // Start random song in Spotify
+        Random rng = new Random(); // Generate random numbers
+        List<User> users = ma.getUsers();
+        int position = rng.nextInt(users.size());
+        ma.mMasterUser = users.get(position);
+        ma.startSong();
+    }
+
+    public void handleUsersList(List<User> users) {
+        ma.setUsers(users);
+        if (ma.mMasterUser != null) {
+            for (User user : users) {
+                if (user.id == ma.mMasterUser.id) {
+                    if (!user.song.uri.equals(ma.mMasterUser.song.uri)) {
+                        ma.mPlayer.clearQueue();
+                        ma.mPlayer.queue(user.song.uri);
+                        Log.d(TAG, user.song.name + " added to queue.");
+                    }
+                    ma.mMasterUser = user;
+                    break;
+                }
+            }
+        }
+
+        ma.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+
+                ImageListAdapter adapter = new ImageListAdapter(ma, ma.getUsers());
+                listView.setAdapter(adapter);
+
+                listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
+                        // Start song in Spotify
+                        ma.mMasterUser = ma.getUsers().get(position);
+                        ma.startSong();
+                    }
+                });
+            }
+        });
+    }
+}

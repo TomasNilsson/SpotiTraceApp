@@ -118,8 +118,10 @@ public class MainActivity extends ActionBarActivity
     private Song currentSong;
     private SpotifyReceiver spotifyReceiver;
     protected User mMasterUser;
+    protected TextView mMasterUserTextView;
     protected boolean onlyFriends;
     protected boolean loggedIn;
+    protected boolean isPlaying;
     private GoogleApiClient mApiClient;
     private Location mLastLocation;
     protected Player mPlayer;
@@ -210,6 +212,21 @@ public class MainActivity extends ActionBarActivity
         users = new ArrayList<User>();
 
         spotifyLogin();
+
+        final ImageView playbackControl = (ImageView)findViewById(R.id.playback_control);
+        playbackControl.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (isPlaying) {
+                    mPlayer.pause();
+                    playbackControl.setImageResource(R.drawable.ic_play);
+                    isPlaying = false;
+                } else {
+                    mPlayer.resume();
+                    playbackControl.setImageResource(R.drawable.ic_pause);
+                    isPlaying = true;
+                }
+            }
+        });
     }
 
     public void spotifyLogin() {
@@ -488,15 +505,27 @@ public class MainActivity extends ActionBarActivity
     public void onPlaybackEvent(EventType eventType, PlayerState playerState) {
         Log.d("MainActivity", "Playback event received: " + eventType.name());
         if (eventType == EventType.TRACK_END) {
+            isPlaying = false;
             update();
         } else if (eventType == EventType.TRACK_START) {
+            isPlaying = true;
+            View bottomBar = findViewById(R.id.bottom_bar);
+            if (bottomBar.getVisibility() != View.VISIBLE) {
+                bottomBar.setVisibility(View.VISIBLE);
+            }
+            TextView songTextView = (TextView)findViewById(R.id.bottom_bar_song);
+            songTextView.setText(currentSong.name);
+            TextView artistTextView = (TextView)findViewById(R.id.bottom_bar_artist);
+            artistTextView.setText(currentSong.artist);
             currentSong = mMasterUser.song;
             Intent i = new Intent(this, UploadService.class);
-            // potentially add data to the intent
+            // Add data to intent
             i.putExtra(EXTRA_ARTIST, currentSong.artist);
             i.putExtra(EXTRA_NAME, currentSong.name);
             i.putExtra(EXTRA_URI, currentSong.uri);
             this.startService(i);
+        } else if (eventType == EventType.LOST_PERMISSION) {
+            Toast.makeText(MainActivity.this, "Your Spotify account is being used somewhere else.", Toast.LENGTH_LONG).show();
         }
     }
 

@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.List;
@@ -28,7 +29,6 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
     ListView listView;
     private SensorManager mSensorManager;
     private Sensor mAccelerometer;
-
     private float mAccel; // Acceleration apart from gravity
     private float mAccelCurrent; // Current acceleration including gravity
     private float mAccelLast; // Last acceleration including gravity
@@ -156,9 +156,14 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
                 listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
                     @Override
                     public void onItemClick(AdapterView<?> adapter, View v, int position, long id) {
-                        // Start song in Spotify
                         ma.mMasterUser = ma.getUsers().get(position);
                         ma.startSong();
+                        TextView textView = (TextView)v.findViewById(R.id.user_name);
+                        if (ma.mMasterUserTextView != null) {
+                            ma.mMasterUserTextView.setTextColor(textView.getTextColors().getDefaultColor());
+                        }
+                        ma.mMasterUserTextView = textView;
+                        ma.mMasterUserTextView.setTextColor(getResources().getColor(R.color.text_color));
                     }
                 });
             }

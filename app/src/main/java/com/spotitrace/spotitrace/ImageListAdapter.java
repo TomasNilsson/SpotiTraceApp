@@ -20,16 +20,14 @@ import java.util.List;
 
 public class ImageListAdapter extends ArrayAdapter<User> {
     private LayoutInflater inflater;
-    private final Activity context;
+    private final MainActivity activity;
     private final List<User> users;
-    private FriendAdder friendAdder;
 
     public ImageListAdapter(Activity context, List<User> users) {
         super(context, R.layout.list_item, users);
-        this.context = context;
+        activity = (MainActivity)context;
         this.users = users;
         this.inflater = context.getLayoutInflater();
-        friendAdder = (MainActivity)context;
     }
 
     @Override
@@ -41,9 +39,9 @@ public class ImageListAdapter extends ArrayAdapter<User> {
             rowView= inflater.inflate(R.layout.list_item, null, true);
         }
 
-        TextView userTxtTitle = (TextView) rowView.findViewById(R.id.userName);
-        TextView songTxtTile = (TextView) rowView.findViewById(R.id.songTitle);
-        TextView artistTextTile = (TextView) rowView.findViewById(R.id.songArtist);
+        TextView userTxtTitle = (TextView) rowView.findViewById(R.id.user_name);
+        TextView songTxtTile = (TextView) rowView.findViewById(R.id.song_title);
+        TextView artistTextTile = (TextView) rowView.findViewById(R.id.song_artist);
         ImageView imageView = (ImageView) rowView.findViewById(R.id.img);
         final ImageView friendView = (ImageView) rowView.findViewById(R.id.friend);
 
@@ -60,7 +58,7 @@ public class ImageListAdapter extends ArrayAdapter<User> {
             @Override
             public void onClick(View v){
                 User user = users.get(position);
-                friendAdder.handleFriend(position);
+                activity.handleFriend(position);
                 if(!user.friend) {
                     friendView.setImageResource(R.drawable.ic_star_friend);
                 }else{
@@ -71,6 +69,10 @@ public class ImageListAdapter extends ArrayAdapter<User> {
 
         // Set text to the song and artist.
         userTxtTitle.setText(user.username +", "+(double)Math.round(user.distance*100)/100+" km away");
+        if (activity.mMasterUser != null && user.username.equals(activity.mMasterUser.username)) {
+            userTxtTitle.setTextColor(activity.getResources().getColor(R.color.text_color));
+            activity.mMasterUserTextView = userTxtTitle;
+        }
         artistTextTile.setText(user.song.artist);
         songTxtTile.setText(user.song.name);
 

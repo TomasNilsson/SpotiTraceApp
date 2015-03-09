@@ -59,11 +59,13 @@ public class ImageListAdapter extends ArrayAdapter<User> {
             public void onClick(View v){
                 User user = users.get(position);
                 activity.handleFriend(position);
+                Log.d("FRIEND VIEW", "EVENT HAPPEND!");
                 if(!user.friend) {
                     friendView.setImageResource(R.drawable.ic_star_friend);
                 }else{
                     friendView.setImageResource(R.drawable.ic_star_no_friend);
                 }
+                user.friend=!user.friend;
             }
         });
 

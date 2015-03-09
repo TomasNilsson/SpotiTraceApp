@@ -724,7 +724,7 @@ public class MainActivity extends ActionBarActivity
                 HttpResponse response = client.execute(post);
                 StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == 201) {
-                    Log.d(TAG, "Upload completed");
+                    Log.d(TAG, "Location Upload completed");
                     updateUserList();
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());

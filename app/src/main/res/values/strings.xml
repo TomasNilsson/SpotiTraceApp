@@ -12,6 +12,8 @@
     <string name="map_dialog_message">Do you want to find users close to the selected position?</string>
     <string name="drawer_open">Slider Menu Opened</string>
     <string name="drawer_close">Slider Menu Closed</string>
+    <string name="compass_info">Point your phone and push the button to get a song from someone in the direction the phone was pointed.</string>
+    <string name="gps_info">Choose a location anywhere in the world and find SpotiTrace users there.</string>
 
     <!-- Nav Drawer Menu Items -->
     <string-array name="nav_drawer_items">

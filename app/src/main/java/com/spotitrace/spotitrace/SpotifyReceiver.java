@@ -13,6 +13,10 @@ public class SpotifyReceiver extends BroadcastReceiver{
     public static final String EXTRA_URI = "com.spotitrace.spotitrace.URI";
     // Used to prevent duplicates (the song is detected twice).
     private String lastSongUri = "";
+    private MainActivity ma;
+    public SpotifyReceiver(MainActivity ma){
+        this.ma=ma;
+    }
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -29,6 +33,7 @@ public class SpotifyReceiver extends BroadcastReceiver{
         //Toast.makeText(context, uri, Toast.LENGTH_LONG).show();
         Log.d("SpotifyReceiver", name);
         if (!uri.equals(lastSongUri)) {
+            ma.removeMaster();
             lastSongUri = uri;
             // use this to start and trigger a service
             Intent i = new Intent(context, UploadService.class);

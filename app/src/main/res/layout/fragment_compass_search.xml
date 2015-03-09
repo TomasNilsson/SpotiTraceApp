@@ -5,8 +5,16 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:paddingBottom="@dimen/activity_vertical_margin" >
 
+    <TextView
+        android:id="@+id/info_box"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/compass_info"
+        android:layout_below="@+id/compass_button"
+        android:layout_centerHorizontal="true"/>
+
     <Button
-        android:id="@+id/compass_button"
+        android:id="@id/compass_button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Find new user!"

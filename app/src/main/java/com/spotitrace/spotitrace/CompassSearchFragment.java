@@ -106,6 +106,8 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
             userSingleList.add(bestUser);
             ma.mMasterUser = bestUser;
             ma.startSong();
+            TextView tv = (TextView)getView().findViewById(R.id.info_box);
+            tv.setText("");
         }else{
             Toast toast = Toast.makeText(ma, "Could not find any users, try again!", Toast.LENGTH_SHORT);
             toast.show();

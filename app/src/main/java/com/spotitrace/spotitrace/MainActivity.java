@@ -456,7 +456,7 @@ public class MainActivity extends ActionBarActivity
 
     private void registerSpotifyReceiver() {
         IntentFilter filter = new IntentFilter("com.spotify.music.metadatachanged");
-        spotifyReceiver = new SpotifyReceiver();
+        spotifyReceiver = new SpotifyReceiver(this);
         registerReceiver(spotifyReceiver, filter);
     }
 
@@ -472,6 +472,15 @@ public class MainActivity extends ActionBarActivity
         // Start in Spotify app
         //Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(song.uri));
         //startActivity(launcher);
+    }
+
+    public void removeMaster(){
+
+        if(mMasterUser != null) {
+            MasterUserRemover masterUserRemover = new MasterUserRemover();
+            masterUserRemover.execute();
+            mMasterUser = null;
+        }
     }
 
     @Override
@@ -743,6 +752,41 @@ public class MainActivity extends ActionBarActivity
         @Override
         protected String doInBackground(Void... params) {
             try {
+                JsonObject jsonObject = new JsonObject();
+                jsonObject.add("id", new JsonPrimitive(mMasterUser.id));
+                Gson gson = new GsonBuilder().create();
+                String jsonString = gson.toJson(jsonObject);
+                Log.d(TAG, jsonString);
+
+                //Create an HTTP client
+                HttpClient client = new DefaultHttpClient();
+                HttpPost post = new HttpPost(SERVER_URL);
+                post.setHeader("Content-Type", "application/json; charset=utf-8");
+                post.setHeader("Authorization", "Token token=\"" + MainActivity.getAccessToken() + "\"");
+                post.setEntity(new StringEntity(jsonString, HTTP.UTF_8));
+                //Perform the request and check the status code
+                HttpResponse response = client.execute(post);
+                StatusLine statusLine = response.getStatusLine();
+                if (statusLine.getStatusCode() == 200) {
+                    Log.d(TAG, "Upload completed");
+                } else {
+                    Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
+                }
+            } catch(Exception ex) {
+                Log.e(TAG, "Failed to send HTTP POST request due to: " + ex);
+            }
+            return null;
+        }
+    }
+
+    private class MasterUserRemover extends AsyncTask<Void, Void, String>{
+        private static final String TAG = "MasterUser Remove";
+        public static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users/master_user/remove";
+
+        @Override
+        protected String doInBackground(Void... params) {
+            try {
+                Log.d(TAG, "Removing ="+mMasterUser.username);
                 JsonObject jsonObject = new JsonObject();
                 jsonObject.add("id", new JsonPrimitive(mMasterUser.id));
                 Gson gson = new GsonBuilder().create();

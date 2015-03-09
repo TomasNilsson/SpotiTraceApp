@@ -16,5 +16,12 @@
         android:background="@drawable/button"
         android:textAllCaps="false"
         />
+    <TextView
+        android:id="@+id/info_box"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/gps_info"
+        android:layout_below="@id/map_button"
+        android:layout_centerHorizontal="true"/>
 
 </RelativeLayout>

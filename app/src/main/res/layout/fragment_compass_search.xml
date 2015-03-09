@@ -10,9 +10,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Find new user!"
-        android:drawableLeft="@drawable/ic_location"
+        android:drawableLeft="@drawable/ic_compass"
         android:textColor="#FFFFFF"
         android:padding="4dp"
+        android:background="@drawable/button"
         android:textAllCaps="false"
         android:layout_centerHorizontal="true"
         />

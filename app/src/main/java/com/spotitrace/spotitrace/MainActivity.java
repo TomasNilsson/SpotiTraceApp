@@ -114,7 +114,7 @@ public class MainActivity extends ActionBarActivity
     public static final String EXTRA_NAME = "com.spotitrace.spotitrace.NAME";
     public static final String EXTRA_URI = "com.spotitrace.spotitrace.URI";
     private static String accessToken;
-    private String username;
+    protected String username;
     private Song currentSong;
     private SpotifyReceiver spotifyReceiver;
     protected User mMasterUser;
@@ -270,11 +270,34 @@ public class MainActivity extends ActionBarActivity
         }
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        // Check to see that the Activity started due to an Android Beam (NFC)
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
+            processIntent(getIntent());
+        }
+    }
+
     // Needed for NFC
     @Override
     public void onNewIntent(Intent intent) {
         // onResume gets called after this to handle the intent
+        Log.d(TAG, "onNewIntent");
         setIntent(intent);
+    }
+
+    /**
+     * Parses the NDEF Message from the intent and prints to the TextView
+     */
+    void processIntent(Intent intent) {
+        Parcelable[] rawMsgs = intent.getParcelableArrayExtra(
+                NfcAdapter.EXTRA_NDEF_MESSAGES);
+        // only one message sent during the beam
+        NdefMessage msg = (NdefMessage) rawMsgs[0];
+        // record 0 contains the MIME type, record 1 is the AAR, if present
+        Log.d(TAG, new String(msg.getRecords()[0].getPayload()));
+        Toast.makeText(this, new String(msg.getRecords()[0].getPayload()), Toast.LENGTH_LONG).show();
     }
 
     @Override

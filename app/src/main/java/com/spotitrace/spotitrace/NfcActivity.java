@@ -12,6 +12,7 @@ import android.widget.Toast;
 
 
 public class NfcActivity extends ActionBarActivity {
+    // Remove this activity?
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

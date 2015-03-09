@@ -123,7 +123,7 @@ public class MainActivity extends ActionBarActivity
     protected boolean loggedIn;
     protected boolean isPlaying;
     private GoogleApiClient mApiClient;
-    private Location mLastLocation;
+    protected Location mLastLocation;
     protected Player mPlayer;
     protected final String TAG="MainActivity";
 

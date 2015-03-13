@@ -243,6 +243,7 @@ public class MainActivity extends ActionBarActivity
 
     public void setFollowerCounter(int nbrOfFollowers){
         whoFollowsMe.setCount(""+nbrOfFollowers);
+        adapter.notifyDataSetChanged();
     }
 
     public void spotifyLogin() {
@@ -533,7 +534,6 @@ public class MainActivity extends ActionBarActivity
         if(mMasterUser != null) {
             MasterUserRemover masterUserRemover = new MasterUserRemover();
             masterUserRemover.execute();
-            mMasterUser = null;
         }
     }
 
@@ -876,6 +876,7 @@ public class MainActivity extends ActionBarActivity
                 StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == 200) {
                     Log.d(TAG, "Upload completed");
+                    mMasterUser = null;
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
                 }

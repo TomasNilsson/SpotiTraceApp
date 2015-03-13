@@ -44,9 +44,9 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
     private Sensor mCompass;
     private double bearing;
     private boolean findUser;
-    private double deltaBearing;
     private ListView listView;
     private static List<User> userSingleList;
+    private TextView tv;
 
     public CompassSearchFragment() {
     }
@@ -63,18 +63,18 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
     @Override
     public void onStart(){
         ma = (MainActivity) getActivity();
+        tv = (TextView) getView().findViewById(R.id.info_box);
         super.onStart();
         findUserButton = (Button)getView().findViewById(R.id.compass_button);
         mSensorManager = (SensorManager) ma.getSystemService(ma.SENSOR_SERVICE);
         mCompass = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
         listView = (ListView)getView().findViewById(R.id.list);
         if(userSingleList != null){
-            TextView tv = (TextView) getView().findViewById(R.id.info_box);
             tv.setText("");
             handleUsersList(userSingleList);
         }else{
             userSingleList = new ArrayList<User>();
-
+            tv.setText(R.string.compass_info);
         }
 
         findUserButton.setOnClickListener(new View.OnClickListener() {
@@ -97,7 +97,6 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
                             ma.update();
                         }else{
                             updateUser();
-                            handleUsersList(userSingleList);
                         }
                     }
                 }, 3000);
@@ -158,9 +157,7 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
     }
 
     public void setNewMasterUser(){
-        if(!userSingleList.isEmpty()){
-            userSingleList.remove(0);
-        }
+        userSingleList.clear();
         List<User> users = ma.getUsers();
         if(!users.isEmpty()) {
             User bestUser = users.get(0);
@@ -178,7 +175,6 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
                 ma.setRecentUsers(userSingleList);
                 ma.mMasterUser = bestUser;
                 ma.startSong();
-                TextView tv = (TextView) getView().findViewById(R.id.info_box);
                 tv.setText("");
             } else {
                 Toast toast = Toast.makeText(ma, "Could not find any users, try again!", Toast.LENGTH_SHORT);
@@ -233,10 +229,10 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
                         if(user == null){
                             //Something went wrong.
                         }else{
-                            userSingleList.remove(0);
+                            userSingleList.clear();
                             userSingleList.add(user);
+                            handleUsersList(userSingleList);
                         }
-
 
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);

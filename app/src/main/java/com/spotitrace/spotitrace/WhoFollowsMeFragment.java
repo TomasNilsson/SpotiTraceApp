@@ -2,7 +2,9 @@ package com.spotitrace.spotitrace;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v4.app.Fragment;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,7 +30,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class WhoFollowsMeFragment extends Fragment {
+public class WhoFollowsMeFragment extends Fragment implements ListHandler {
     protected final String TAG = "WhoFollowsMeFragment";
     private MainActivity ma;
     private List<User> followers;
@@ -54,6 +56,23 @@ public class WhoFollowsMeFragment extends Fragment {
         followers = new ArrayList<User>();
         listView = (ListView)getView().findViewById(R.id.list);
         textView = (TextView)getView().findViewById(R.id.info_box);
+
+        final SwipeRefreshLayout swipeView = (SwipeRefreshLayout) getView().findViewById(R.id.swipe_container);
+        swipeView.setColorScheme(android.R.color.holo_blue_dark, android.R.color.holo_blue_light, android.R.color.holo_green_light, android.R.color.holo_green_light);
+        swipeView.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                swipeView.setRefreshing(true);
+                (new Handler()).postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        swipeView.setRefreshing(false);
+                        UserFetcher userFetcher = new UserFetcher();
+                        userFetcher.execute();
+                    }
+                }, 3000);
+            }
+        });
     }
 
     @Override

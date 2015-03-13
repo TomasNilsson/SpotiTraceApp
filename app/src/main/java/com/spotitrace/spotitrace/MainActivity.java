@@ -134,7 +134,7 @@ public class MainActivity extends ActionBarActivity
     protected Location mLastLocation;
     protected Player mPlayer;
     protected final String TAG="MainActivity";
-    protected int shakeLimit = 15;
+    protected int shakeLimit = 13;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -215,10 +215,8 @@ public class MainActivity extends ActionBarActivity
         mDrawerLayout.setDrawerListener(mDrawerToggle);
         mDrawerList.setOnItemClickListener(new SlideMenuClickListener());
 
-        if (savedInstanceState == null) {
-            // on first time display view for first nav item
-            displayView(0);
-        }
+        // Display view for first nav item
+        displayView(0);
 
         users = new ArrayList<User>();
         recentUsers = new ArrayList<User>();
@@ -267,7 +265,7 @@ public class MainActivity extends ActionBarActivity
             AuthenticationResponse response = AuthenticationClient.getResponse(resultCode, intent);
             if (response.getType() == AuthenticationResponse.Type.TOKEN) {
                 accessToken = response.getAccessToken();
-                Log.d("MainActivity", "User logged in");
+                //Log.d("MainActivity", "User logged in");
                 SpotifyUserFetcher userFetcher = new SpotifyUserFetcher();
                 userFetcher.execute();
                 Config playerConfig = new Config(this, response.getAccessToken(), CLIENT_ID);
@@ -283,6 +281,9 @@ public class MainActivity extends ActionBarActivity
                         Log.e("MainActivity", "Could not initialize player: " + throwable.getMessage());
                     }
                 });
+            } else {
+                Log.d(TAG, "Back button pressed");
+                spotifyLogin();
             }
         }
     }
@@ -429,8 +430,11 @@ public class MainActivity extends ActionBarActivity
                 fragment = new NfcConnectFragment();
                 break;
             case 6:
+                mPlayer.logout();
                 AuthenticationClient.logout(this);
-                spotifyLogin();
+                // Mark first menu item as active when activity is recreated
+                mDrawerList.performItemClick(mDrawerList, 0, mDrawerList.getItemIdAtPosition(0));
+                this.recreate();
                 break;
             default:
                 break;
@@ -567,7 +571,7 @@ public class MainActivity extends ActionBarActivity
     @Override
     public void onPlaybackEvent(EventType eventType, PlayerState playerState) {
         Log.d("MainActivity", "Playback event received: " + eventType.name());
-        if (eventType == EventType.TRACK_END) {
+        if (eventType == EventType.TRACK_END || eventType == EventType.END_OF_CONTEXT) {
             isPlaying = false;
             update();
         } else if (eventType == EventType.TRACK_START) {

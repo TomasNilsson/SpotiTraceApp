@@ -20,10 +20,9 @@
     </android.support.v4.widget.SwipeRefreshLayout>
 
     <TextView
+        android:id="@+id/who_follows_info_box"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/info_box"
-        android:layout_below="@id/swipe_container"
         android:text="Loading..."/>
 
 </RelativeLayout>

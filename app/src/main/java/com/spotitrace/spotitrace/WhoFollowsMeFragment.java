@@ -55,7 +55,7 @@ public class WhoFollowsMeFragment extends Fragment implements ListHandler {
         ma = (MainActivity) getActivity();
         followers = new ArrayList<User>();
         listView = (ListView)getView().findViewById(R.id.list);
-        textView = (TextView)getView().findViewById(R.id.info_box);
+        textView = (TextView)getView().findViewById(R.id.who_follows_info_box);
 
         final SwipeRefreshLayout swipeView = (SwipeRefreshLayout) getView().findViewById(R.id.swipe_container);
         swipeView.setColorScheme(android.R.color.holo_blue_dark, android.R.color.holo_blue_light, android.R.color.holo_green_light, android.R.color.holo_green_light);

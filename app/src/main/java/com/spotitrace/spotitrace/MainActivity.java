@@ -606,6 +606,7 @@ public class MainActivity extends ActionBarActivity
     protected void onDestroy() {
         Spotify.destroyPlayer(this);
         super.onDestroy();
+        removeMaster();
         unregisterReceiver(spotifyReceiver);
     }
 

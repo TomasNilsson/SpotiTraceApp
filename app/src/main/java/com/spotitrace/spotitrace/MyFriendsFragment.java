@@ -84,7 +84,7 @@ public class MyFriendsFragment extends Fragment implements SensorEventListener, 
 
     public void setInfoText(){
         if (ma.getUsers().isEmpty()){
-            infoView.setText("You have no friends");
+            infoView.setText("You have no friends, add a friend by clicking the star next to their name.");
         }else{
             infoView.setText("");
         }

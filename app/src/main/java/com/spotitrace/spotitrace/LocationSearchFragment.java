@@ -307,8 +307,7 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
         mAccelCurrent = (float) Math.sqrt((double) (x * x + y * y + z * z));
         float delta = mAccelCurrent - mAccelLast;
         mAccel = mAccel * 0.9f + delta; // Perform low-cut filter
-        if (mAccel > 20) {
-
+        if (mAccel > ma.shakeLimit) {
             startRandomSong(); // Call rolling() method when phone is shaken.
         }
     }

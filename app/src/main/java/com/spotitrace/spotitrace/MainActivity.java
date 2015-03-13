@@ -134,6 +134,7 @@ public class MainActivity extends ActionBarActivity
     protected Location mLastLocation;
     protected Player mPlayer;
     protected final String TAG="MainActivity";
+    protected int shakeLimit = 15;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -321,10 +322,12 @@ public class MainActivity extends ActionBarActivity
         NdefMessage msg = (NdefMessage) rawMsgs[0];
         // record 0 contains the MIME type, record 1 is the AAR, if present
         ByteBuffer buffer = ByteBuffer.allocate(8);
-        buffer.put(msg.getRecords()[0].getPayload()).flip();
+        buffer.put(msg.getRecords()[0].getPayload());
+        buffer.flip();
         nfcMasterUserId = buffer.getLong();
-        Log.d(TAG, new String(msg.getRecords()[0].getPayload()));
-        Toast.makeText(this, new String(msg.getRecords()[0].getPayload()), Toast.LENGTH_LONG).show();
+        FragmentManager fragmentManager = getSupportFragmentManager();
+        fragmentManager.beginTransaction()
+                .replace(R.id.frame_container, new NfcConnectFragment(), "SpotiTraceFragment").commit();
     }
 
     @Override
@@ -764,7 +767,7 @@ public class MainActivity extends ActionBarActivity
                         //Read the server response and attempt to parse it as JSON
                         Reader reader = new InputStreamReader(content);
                         Gson gsonRead = new GsonBuilder().create();
-                        User spotiTraceUser = gson.fromJson(reader, User.class);
+                        User spotiTraceUser = gsonRead.fromJson(reader, User.class);
                         userId = spotiTraceUser.id;
                         Log.d(TAG, "User ID: " + userId);
                         content.close();

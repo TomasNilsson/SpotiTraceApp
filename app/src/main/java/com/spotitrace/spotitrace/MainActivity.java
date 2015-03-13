@@ -576,11 +576,12 @@ public class MainActivity extends ActionBarActivity
             if (bottomBar.getVisibility() != View.VISIBLE) {
                 bottomBar.setVisibility(View.VISIBLE);
             }
+            currentSong = mMasterUser.song;
             TextView songTextView = (TextView)findViewById(R.id.bottom_bar_song);
             songTextView.setText(currentSong.name);
             TextView artistTextView = (TextView)findViewById(R.id.bottom_bar_artist);
             artistTextView.setText(currentSong.artist);
-            currentSong = mMasterUser.song;
+
             Intent i = new Intent(this, UploadService.class);
             // Add data to intent
             i.putExtra(EXTRA_ARTIST, currentSong.artist);

@@ -66,6 +66,7 @@ public class ImageListAdapter extends ArrayAdapter<User> {
                     friendView.setImageResource(R.drawable.ic_star_no_friend);
                 }
                 user.friend=!user.friend;
+                activity.update();
             }
         });
 

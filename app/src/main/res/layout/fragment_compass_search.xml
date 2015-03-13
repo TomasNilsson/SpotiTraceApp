@@ -5,6 +5,8 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     android:paddingBottom="@dimen/activity_vertical_margin" >
 
+
+
     <TextView
         android:id="@+id/info_box"
         android:layout_width="wrap_content"
@@ -25,12 +27,19 @@
         android:textAllCaps="false"
         android:layout_centerHorizontal="true"
         />
+    <android.support.v4.widget.SwipeRefreshLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/swipe_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/compass_button">
 
     <ListView
         android:id="@+id/list"
         android:layout_height="wrap_content"
-        android:layout_width="match_parent"
-        android:layout_below="@id/compass_button">
+        android:layout_width="match_parent">
     </ListView>
+
+    </android.support.v4.widget.SwipeRefreshLayout>
 
 </RelativeLayout>

@@ -23,7 +23,7 @@ import android.widget.Toast;
 import java.util.List;
 import java.util.Random;
 
-public class MyFriendsFragment extends Fragment implements SensorEventListener {
+public class MyFriendsFragment extends Fragment implements SensorEventListener, ListHandler {
     protected final String TAG = "MyFriendsFragment";
     MainActivity ma;
     ListView listView;

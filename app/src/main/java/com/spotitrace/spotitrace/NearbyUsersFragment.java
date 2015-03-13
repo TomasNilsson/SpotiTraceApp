@@ -32,6 +32,7 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
     private float mAccel; // Acceleration apart from gravity
     private float mAccelCurrent; // Current acceleration including gravity
     private float mAccelLast; // Last acceleration including gravity
+    private TextView nearbyInfo;
 
     public NearbyUsersFragment() {
     }
@@ -49,6 +50,7 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
     public void onStart() {
         super.onStart();
         ma = (MainActivity) getActivity();
+        nearbyInfo = (TextView)getView().findViewById(R.id.nearby_info);
         ma.onlyFriends = false;
         listView = (ListView) getView().findViewById(R.id.list);
         if (ma.loggedIn) {
@@ -72,11 +74,20 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
                     public void run() {
                         swipeView.setRefreshing(false);
                         ma.update();
+                        setInfoText();
                     }
                 }, 3000);
             }
         });
 
+    }
+
+    public void setInfoText(){
+        if (ma.getUsers().isEmpty()){
+            nearbyInfo.setText("There are no users nearby. Swipe down to refresh.");
+        }else{
+            nearbyInfo.setText("");
+        }
     }
 
     @Override
@@ -149,6 +160,8 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
         ma.runOnUiThread(new Runnable() {
             @Override
             public void run() {
+
+                setInfoText();
 
                 ImageListAdapter adapter = new ImageListAdapter(ma, ma.getUsers());
                 listView.setAdapter(adapter);

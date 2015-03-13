@@ -179,6 +179,7 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
             } else {
                 Toast toast = Toast.makeText(ma, "Could not find any users, try again!", Toast.LENGTH_SHORT);
                 toast.show();
+                tv.setText(R.string.compass_info);
             }
         }else{
             ma.update();

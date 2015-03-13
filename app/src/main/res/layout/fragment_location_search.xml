@@ -15,6 +15,7 @@
         android:padding="4dp"
         android:background="@drawable/button"
         android:textAllCaps="false"
+        android:layout_centerHorizontal="true"
         />
     <TextView
         android:id="@+id/info_box"
@@ -23,5 +24,20 @@
         android:text="@string/gps_info"
         android:layout_below="@id/map_button"
         android:layout_centerHorizontal="true"/>
+
+    <android.support.v4.widget.SwipeRefreshLayout
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/swipe_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/map_button">
+
+    <ListView
+        android:id="@+id/list"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent">
+    </ListView>
+
+    </android.support.v4.widget.SwipeRefreshLayout>
 
 </RelativeLayout>

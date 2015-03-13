@@ -93,6 +93,9 @@ public class MainActivity extends ActionBarActivity
     private ListView mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
 
+    //To be able to change count
+    private NavDrawerItem whoFollowsMe;
+
     // nav drawer title
     private CharSequence mDrawerTitle;
 
@@ -107,6 +110,7 @@ public class MainActivity extends ActionBarActivity
     private NavDrawerListAdapter adapter;
 
     private List<User> users;
+    private List<User> recentUsers;
     
     private static final int REQUEST_CODE = 1337;
     private static final String CLIENT_ID = "d3d6beb8d2a04634bd0eeec107c11e18";
@@ -168,7 +172,8 @@ public class MainActivity extends ActionBarActivity
         // My Friends
         navDrawerItems.add(new NavDrawerItem(navMenuTitles[1], navMenuIcons.getResourceId(1, -1)));
         // Who Follows Me? Will add a counter here
-        navDrawerItems.add(new NavDrawerItem(navMenuTitles[2], navMenuIcons.getResourceId(2, -1), true, "22"));
+        whoFollowsMe = new NavDrawerItem(navMenuTitles[2], navMenuIcons.getResourceId(2, -1), true, "0");
+        navDrawerItems.add(whoFollowsMe);
         // Location Search
         navDrawerItems.add(new NavDrawerItem(navMenuTitles[3], navMenuIcons.getResourceId(3, -1)));
         // Compass Search
@@ -215,6 +220,7 @@ public class MainActivity extends ActionBarActivity
         }
 
         users = new ArrayList<User>();
+        recentUsers = new ArrayList<User>();
 
         spotifyLogin();
 
@@ -232,6 +238,10 @@ public class MainActivity extends ActionBarActivity
                 }
             }
         });
+    }
+
+    public void setFollowerCounter(int nbrOfFollowers){
+        whoFollowsMe.setCount(""+nbrOfFollowers);
     }
 
     public void spotifyLogin() {
@@ -441,6 +451,7 @@ public class MainActivity extends ActionBarActivity
     public List<User> getUsers(){
         return users;
     }
+    public List<User> getRecentUsers() { return recentUsers; }
 
     public void update() {
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
@@ -594,10 +605,11 @@ public class MainActivity extends ActionBarActivity
         this.users= users;
     }
 
+    public void setRecentUsers(List<User> users) { recentUsers = users; }
+
     @Override
-    public void handleFriend(int position){
-        User user = users.get(position);
-        FriendUserUploader FUU = new FriendUserUploader( user.id, user.friend);
+    public void handleFriend(long id, boolean friend){
+        FriendUserUploader FUU = new FriendUserUploader( id, friend);
         FUU.execute();
     }
 
@@ -650,13 +662,15 @@ public class MainActivity extends ActionBarActivity
                         users = Arrays.asList(gson.fromJson(reader, User[].class));
                         content.close();
 
+                        ListHandler fragment = (ListHandler)getSupportFragmentManager().findFragmentByTag("SpotiTraceFragment");
+                        fragment.handleUsersList(users);/*
                         if (onlyFriends) {
                             MyFriendsFragment fragment = (MyFriendsFragment)getSupportFragmentManager().findFragmentByTag("SpotiTraceFragment");
                             fragment.handleUsersList(users);
                         } else {
                             NearbyUsersFragment fragment = (NearbyUsersFragment) getSupportFragmentManager().findFragmentByTag("SpotiTraceFragment");
                             fragment.handleUsersList(users);
-                        }
+                        }*/
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);
                         failedLoadingSongs();
@@ -736,6 +750,7 @@ public class MainActivity extends ActionBarActivity
                 post.setEntity(new StringEntity(jsonString, HTTP.UTF_8));
                 //Perform the request and check the status code
                 HttpResponse response = client.execute(post);
+
                 StatusLine statusLine = response.getStatusLine();
                 if (statusLine.getStatusCode() == 201) {
                     Log.d(TAG, "Upload completed");

@@ -68,6 +68,7 @@ import org.apache.http.protocol.HTTP;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -115,13 +116,16 @@ public class MainActivity extends ActionBarActivity
     public static final String EXTRA_URI = "com.spotitrace.spotitrace.URI";
     private static String accessToken;
     protected String username;
+    protected long userId;
     private Song currentSong;
     private SpotifyReceiver spotifyReceiver;
+    protected long nfcMasterUserId;
     protected User mMasterUser;
     protected TextView mMasterUserTextView;
     protected boolean onlyFriends;
     protected boolean loggedIn;
     protected boolean isPlaying;
+    private boolean newIntent = false;
     private GoogleApiClient mApiClient;
     protected Location mLastLocation;
     protected Player mPlayer;
@@ -131,6 +135,7 @@ public class MainActivity extends ActionBarActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        Log.d(TAG, "onCreate");
 
         // Action Bar
         ActionBar actionBar = getSupportActionBar();
@@ -271,11 +276,19 @@ public class MainActivity extends ActionBarActivity
     }
 
     @Override
+    public void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause");
+    }
+
+    @Override
     public void onResume() {
         super.onResume();
+        Log.d(TAG, "onResume");
         // Check to see that the Activity started due to an Android Beam (NFC)
-        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) {
+        if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction()) && newIntent) {
             processIntent(getIntent());
+            newIntent = false;
         }
     }
 
@@ -284,6 +297,7 @@ public class MainActivity extends ActionBarActivity
     public void onNewIntent(Intent intent) {
         // onResume gets called after this to handle the intent
         Log.d(TAG, "onNewIntent");
+        newIntent = true;
         setIntent(intent);
     }
 
@@ -296,6 +310,9 @@ public class MainActivity extends ActionBarActivity
         // only one message sent during the beam
         NdefMessage msg = (NdefMessage) rawMsgs[0];
         // record 0 contains the MIME type, record 1 is the AAR, if present
+        ByteBuffer buffer = ByteBuffer.allocate(8);
+        buffer.put(msg.getRecords()[0].getPayload()).flip();
+        nfcMasterUserId = buffer.getLong();
         Log.d(TAG, new String(msg.getRecords()[0].getPayload()));
         Toast.makeText(this, new String(msg.getRecords()[0].getPayload()), Toast.LENGTH_LONG).show();
     }
@@ -725,6 +742,20 @@ public class MainActivity extends ActionBarActivity
                     registerSpotifyReceiver();
                     LocationUploader uploader = new LocationUploader();
                     uploader.execute();
+
+                    HttpEntity entity = response.getEntity();
+                    InputStream content = entity.getContent();
+                    try {
+                        //Read the server response and attempt to parse it as JSON
+                        Reader reader = new InputStreamReader(content);
+                        Gson gsonRead = new GsonBuilder().create();
+                        User spotiTraceUser = gson.fromJson(reader, User.class);
+                        userId = spotiTraceUser.id;
+                        Log.d(TAG, "User ID: " + userId);
+                        content.close();
+                    } catch (Exception ex) {
+                        Log.e(TAG, "Failed to parse JSON due to: " + ex);
+                    }
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
                 }

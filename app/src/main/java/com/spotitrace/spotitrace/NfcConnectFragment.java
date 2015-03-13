@@ -14,6 +14,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import java.nio.ByteBuffer;
+
 import static android.nfc.NdefRecord.createMime;
 
 public class NfcConnectFragment extends Fragment
@@ -40,6 +42,10 @@ public class NfcConnectFragment extends Fragment
         super.onStart();
         activity = (MainActivity) getActivity();
 
+        if (activity.nfcMasterUserId != 0) {
+            // TODO: Get song for masterUser from server and show in list
+        }
+
         // Check for available NFC Adapter
         mNfcAdapter = NfcAdapter.getDefaultAdapter(activity);
         if (mNfcAdapter == null) {
@@ -57,9 +63,9 @@ public class NfcConnectFragment extends Fragment
      */
     @Override
     public NdefMessage createNdefMessage(NfcEvent event) {
-        String username = activity.username;
+        // Include the userId of the master user in the NdefMessage
         NdefMessage msg = new NdefMessage(NdefRecord.createMime(
-                "application/com.spotitrace.spotitrace", username.getBytes())
+                "application/com.spotitrace.spotitrace", ByteBuffer.allocate(8).putLong(activity.userId).array())
                 /**
                  * The Android Application Record (AAR) is commented out. When a device
                  * receives a push with an AAR in it, the application specified in the AAR

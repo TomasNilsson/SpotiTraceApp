@@ -528,6 +528,10 @@ public class MainActivity extends ActionBarActivity
         masterUserUploader.execute();
         currentSong = mMasterUser.song; // The file path of the clicked image
         mPlayer.play(currentSong.uri);
+        ImageView playbackControl = (ImageView)findViewById(R.id.playback_control);
+        playbackControl.setImageResource(R.drawable.ic_pause);
+        isPlaying = true;
+
         // Start in Spotify app
         //Intent launcher = new Intent( Intent.ACTION_VIEW, Uri.parse(song.uri));
         //startActivity(launcher);
@@ -621,15 +625,6 @@ public class MainActivity extends ActionBarActivity
         FUU.execute();
     }
 
-    private void failedLoadingSongs() {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                Toast.makeText(MainActivity.this, "Failed to load Songs. Have a look at LogCat.", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     private class UserFetcher extends AsyncTask<Void, Void, String>{
         private static final String TAG = "UserFetcher";
         public final String SERVER_URL;
@@ -681,15 +676,12 @@ public class MainActivity extends ActionBarActivity
                         }*/
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);
-                        failedLoadingSongs();
                     }
                 } else {
                     Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
-                    failedLoadingSongs();
                 }
             } catch(Exception ex) {
                 Log.e(TAG, "Failed to send HTTP GET request due to: " + ex);
-                failedLoadingSongs();
             }
             return null;
         }

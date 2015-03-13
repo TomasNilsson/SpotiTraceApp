@@ -245,10 +245,6 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
                         Log.d(TAG, "Found "+users.size()+" users");
 
                         handleUsersList(users);
-
-
-
-
                     } catch (Exception ex) {
                         Log.e(TAG, "Failed to parse JSON due to: " + ex);
                     }
@@ -325,6 +321,12 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
         int position = rng.nextInt(users.size());
         ma.mMasterUser = users.get(position);
         ma.startSong();
+        TextView textView = (TextView) listView.getChildAt(position).findViewById(R.id.user_name);
+        if (ma.mMasterUserTextView != null) {
+            ma.mMasterUserTextView.setTextColor(textView.getTextColors().getDefaultColor());
+        }
+        ma.mMasterUserTextView = textView;
+        ma.mMasterUserTextView.setTextColor(getResources().getColor(R.color.text_color));
     }
 
 }

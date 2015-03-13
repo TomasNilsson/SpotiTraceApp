@@ -139,6 +139,12 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
         int position = rng.nextInt(users.size());
         ma.mMasterUser = users.get(position);
         ma.startSong();
+        TextView textView = (TextView) listView.getChildAt(position).findViewById(R.id.user_name);
+        if (ma.mMasterUserTextView != null) {
+            ma.mMasterUserTextView.setTextColor(textView.getTextColors().getDefaultColor());
+        }
+        ma.mMasterUserTextView = textView;
+        ma.mMasterUserTextView.setTextColor(getResources().getColor(R.color.text_color));
     }
 
     public void handleUsersList(List<User> users) {

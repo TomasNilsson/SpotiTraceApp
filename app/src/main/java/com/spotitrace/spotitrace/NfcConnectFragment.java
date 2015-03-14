@@ -92,9 +92,8 @@ public class NfcConnectFragment extends Fragment
         });
 
         if (activity.nfcMasterUserId != 0) {
-            Toast.makeText(activity, "New user received", Toast.LENGTH_LONG).show();
-            Log.d(TAG, "User received: " + activity.nfcMasterUserId);
             updateUser();
+
         }
 
         // Check for available NFC Adapter
@@ -146,7 +145,7 @@ public class NfcConnectFragment extends Fragment
         public void handleMessage(Message msg) {
             switch (msg.what) {
                 case MESSAGE_SENT:
-                    Toast.makeText(activity, "Sent my user id: " + activity.userId, Toast.LENGTH_LONG).show();
+                    Toast.makeText(activity, "Song sent!", Toast.LENGTH_LONG).show();
                     break;
             }
         }
@@ -213,7 +212,10 @@ public class NfcConnectFragment extends Fragment
                             userSingleList.clear();
                             userSingleList.add(user);
                             activity.mMasterUser = user;
-                            activity.startSong();
+                            if (activity.newIntent) {
+                                activity.startSong();
+                                activity.newIntent = false;
+                            }
                             handleUsersList(userSingleList);
                         }
 

@@ -129,7 +129,7 @@ public class MainActivity extends ActionBarActivity
     protected boolean onlyFriends;
     protected boolean loggedIn;
     protected boolean isPlaying;
-    private boolean newIntent = false;
+    protected boolean newIntent = false;
     private GoogleApiClient mApiClient;
     protected Location mLastLocation;
     protected Player mPlayer;
@@ -301,7 +301,6 @@ public class MainActivity extends ActionBarActivity
         // Check to see that the Activity started due to an Android Beam (NFC)
         if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction()) && newIntent) {
             processIntent(getIntent());
-            newIntent = false;
         }
     }
 

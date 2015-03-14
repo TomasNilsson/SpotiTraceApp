@@ -35,7 +35,7 @@ import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CompassSearchFragment extends Fragment implements SensorEventListener, ListHandler {
+public class CompassSearchFragment extends Fragment implements SensorEventListener, ListHandler, UserListUpdater {
     protected final String TAG = "CompassSearchFragment";
     private Button findUserButton;
     private SensorManager mSensorManager;
@@ -61,15 +61,16 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
 
     @Override
     public void onStart(){
+        super.onStart();
         ma = (MainActivity) getActivity();
         tv = (TextView) getView().findViewById(R.id.info_box);
-        super.onStart();
         findUserButton = (Button)getView().findViewById(R.id.compass_button);
         mSensorManager = (SensorManager) ma.getSystemService(ma.SENSOR_SERVICE);
         mCompass = mSensorManager.getDefaultSensor(Sensor.TYPE_ORIENTATION);
         listView = (ListView)getView().findViewById(R.id.list);
         if(userSingleList != null){
             tv.setText("");
+            ma.userSingleList = true;
             handleUsersList(userSingleList);
         }else{
             userSingleList = new ArrayList<User>();
@@ -95,7 +96,7 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
                         if(userSingleList.isEmpty()) {
                             ma.update();
                         }else{
-                            updateUser();
+                            updateUserList();
                         }
                     }
                 }, 3000);
@@ -116,6 +117,12 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
     }
 
     @Override
+    public void onStop() {
+        super.onStop();
+        ma.userSingleList = false;
+    }
+
+    @Override
     public void onSensorChanged(SensorEvent event){
         if(findUser) {
             bearing = event.values[0];
@@ -132,6 +139,20 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
 
     @Override
     public void handleUsersList(List<User> users){
+        if (ma.mMasterUser != null) {
+            for (User user : users) {
+                if (user.id == ma.mMasterUser.id) {
+                    if (!user.song.uri.equals(ma.mMasterUser.song.uri)) {
+                        ma.mPlayer.clearQueue();
+                        ma.mPlayer.queue(user.song.uri);
+                        Log.d(TAG, user.song.name + " added to queue.");
+                    }
+                    ma.mMasterUser = user;
+                    break;
+                }
+            }
+        }
+
         ma.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -172,6 +193,7 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
             if (deltaBearing < 20) {
                 userSingleList.add(bestUser);
                 ma.setRecentUsers(userSingleList);
+                ma.userSingleList = true;
                 ma.mMasterUser = bestUser;
                 ma.startSong();
                 tv.setText("");
@@ -191,13 +213,13 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
         return Math.abs(bearing-user.bearing)*Math.sqrt(user.distance);
     }
 
-    public void updateUser(){
+    public void updateUserList(){
         UserFetcher userFetcher = new UserFetcher();
         userFetcher.execute();
     }
 
     private class UserFetcher extends AsyncTask<Void, Void, String> {
-        private static final String TAG = "UserFetcher";
+        private static final String TAG = "UserFetcher Compass";
         public final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users/"+userSingleList.get(0).id;
 
         @Override
@@ -229,6 +251,7 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
                         if(user != null){
                             userSingleList.clear();
                             userSingleList.add(user);
+                            Log.d(TAG, "User list updated");
                             handleUsersList(userSingleList);
                         }
 

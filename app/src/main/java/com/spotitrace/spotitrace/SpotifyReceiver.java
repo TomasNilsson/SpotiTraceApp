@@ -22,7 +22,7 @@ public class SpotifyReceiver extends BroadcastReceiver{
         String name = intent.getStringExtra("track");
         String uri = intent.getStringExtra("id");
 
-        if (!uri.equals(lastSongUri) && uri != null) {
+        if (uri != null && !uri.equals(lastSongUri)) {
             Log.d("SpotifyReceiver", name);
             ma.removeMaster();
             lastSongUri = uri;

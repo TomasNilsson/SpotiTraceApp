@@ -100,6 +100,8 @@ public class MainActivity extends ActionBarActivity
     protected User mMasterUser;
     protected TextView mMasterUserTextView;
     protected boolean onlyFriends;
+    protected boolean locationSearch;
+    protected boolean userSingleList;
     protected boolean loggedIn;
     protected boolean isPlaying;
     protected boolean newIntent = false;
@@ -493,8 +495,15 @@ public class MainActivity extends ActionBarActivity
 
     // Called in LocationUploader to update user list
     public void updateUserList() {
-        UserFetcher fetcher = new UserFetcher(onlyFriends);
-        fetcher.execute();
+        if (locationSearch || userSingleList) {
+            // Get the active fragment
+            UserListUpdater fragment = (UserListUpdater)getSupportFragmentManager().findFragmentByTag("SpotiTraceFragment");
+            // Call updateUserList in active fragment
+            fragment.updateUserList();
+        } else {
+            UserFetcher fetcher = new UserFetcher(onlyFriends);
+            fetcher.execute();
+        }
     }
 
     // Listen to broadcasts from Spotify
@@ -645,6 +654,7 @@ public class MainActivity extends ActionBarActivity
                         List<User> users = new ArrayList<User>();
 
                         users = Arrays.asList(gson.fromJson(reader, User[].class));
+                        Log.d(TAG, "User list updated");
                         content.close();
 
                         // Get the active fragment

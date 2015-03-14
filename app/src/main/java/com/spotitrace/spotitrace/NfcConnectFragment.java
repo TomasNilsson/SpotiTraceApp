@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NfcConnectFragment extends Fragment
-        implements NfcAdapter.CreateNdefMessageCallback, NfcAdapter.OnNdefPushCompleteCallback, ListHandler {
+        implements NfcAdapter.CreateNdefMessageCallback, NfcAdapter.OnNdefPushCompleteCallback, ListHandler, UserListUpdater {
     protected final String TAG = "NfcConnectFragment";
     private NfcAdapter mNfcAdapter;
     private MainActivity activity;
@@ -63,6 +63,7 @@ public class NfcConnectFragment extends Fragment
         activity = (MainActivity) getActivity();
         listView = (ListView)getView().findViewById(R.id.list);
         if(userSingleList != null){
+            activity.userSingleList = true;
             handleUsersList(userSingleList);
         }else{
             userSingleList = new ArrayList<User>();
@@ -81,7 +82,7 @@ public class NfcConnectFragment extends Fragment
                         if(userSingleList.isEmpty()) {
                             activity.update();
                         }else{
-                            updateUser();
+                            updateUserList();
                         }
                     }
                 }, 3000);
@@ -89,8 +90,8 @@ public class NfcConnectFragment extends Fragment
         });
 
         if (activity.nfcMasterUserId != 0) {
-            updateUser();
-
+            activity.userSingleList = true;
+            updateUserList();
         }
 
         // Check for available NFC Adapter
@@ -103,6 +104,12 @@ public class NfcConnectFragment extends Fragment
             // Register callback to listen for message-sent success
             mNfcAdapter.setOnNdefPushCompleteCallback(this, activity);
         }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        activity.userSingleList = false;
     }
 
     /**
@@ -142,6 +149,20 @@ public class NfcConnectFragment extends Fragment
 
     @Override
     public void handleUsersList(List<User> users){
+        if (activity.mMasterUser != null) {
+            for (User user : users) {
+                if (user.id == activity.mMasterUser.id) {
+                    if (!user.song.uri.equals(activity.mMasterUser.song.uri)) {
+                        activity.mPlayer.clearQueue();
+                        activity.mPlayer.queue(user.song.uri);
+                        Log.d(TAG, user.song.name + " added to queue.");
+                    }
+                    activity.mMasterUser = user;
+                    break;
+                }
+            }
+        }
+
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -163,13 +184,13 @@ public class NfcConnectFragment extends Fragment
         });
     }
 
-    public void updateUser(){
+    public void updateUserList(){
         UserFetcher userFetcher = new UserFetcher();
         userFetcher.execute();
     }
 
     private class UserFetcher extends AsyncTask<Void, Void, String> {
-        private static final String TAG = "UserFetcher";
+        private static final String TAG = "UserFetcher NFC";
         public final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users/"+activity.nfcMasterUserId;
 
         @Override
@@ -200,6 +221,7 @@ public class NfcConnectFragment extends Fragment
                             Log.d(TAG, "New user: " + user.username);
                             userSingleList.clear();
                             userSingleList.add(user);
+                            Log.d(TAG, "User list updated");
                             activity.mMasterUser = user;
                             if (activity.newIntent) {
                                 activity.startSong();

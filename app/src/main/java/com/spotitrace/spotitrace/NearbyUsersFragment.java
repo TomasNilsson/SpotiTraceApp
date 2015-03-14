@@ -127,7 +127,7 @@ public class NearbyUsersFragment extends Fragment implements SensorEventListener
         float delta = mAccelCurrent - mAccelLast;
         mAccel = mAccel * 0.9f + delta; // Perform low-cut filter
         if (mAccel > ma.shakeLimit) {
-            startRandomSong(); // Call rolling() method when phone is shaken.
+            startRandomSong();
         }
     }
 

@@ -49,7 +49,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
-public class LocationSearchFragment extends Fragment implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener, ListHandler, SensorEventListener {
+public class LocationSearchFragment extends Fragment implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener, ListHandler, UserListUpdater, SensorEventListener {
     protected final String TAG = "LocationSearchFragment";
     private SupportMapFragment mMapFragment;
     private static GoogleMap mMap;
@@ -86,8 +86,8 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
         listView = (ListView)getView().findViewById(R.id.list);
         textView = (TextView)getView().findViewById(R.id.info_box);
         if(location != null){
-            UserFetcher userFetcher = new UserFetcher();
-            userFetcher.execute();
+            ma.locationSearch = true;
+            updateUserList();
         }
         activity = (MainActivity) getActivity();
         Button button = (Button) getView().findViewById(R.id.map_button);
@@ -126,8 +126,7 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
                     public void run() {
                         swipeView.setRefreshing(false);
                         if(location != null){
-                            UserFetcher userFetcher = new UserFetcher();
-                            userFetcher.execute();
+                            updateUserList();
                         }
                     }
                 }, 3000);
@@ -151,6 +150,12 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
     public void onPause(){
         super.onPause();
         mSensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        ma.locationSearch = false;
     }
 
     @Override
@@ -195,8 +200,13 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
         }
     }
 
-    private class UserFetcher extends AsyncTask<Void, Void, String> {
-        private static final String TAG = "UserFetcher";
+    public void updateUserList() {
+        UserFetcher userFetcher = new UserFetcher();
+        userFetcher.execute();
+    }
+
+    protected class UserFetcher extends AsyncTask<Void, Void, String> {
+        private static final String TAG = "UserFetcher LocationSearch";
         public final String SERVER_URL = "http://spotitrace.herokuapp.com/api/users/location";
 
 
@@ -207,8 +217,6 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
                 SpotiTraceLocation loc = new SpotiTraceLocation(location.longitude,location.latitude);
                 Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
                 String jsonString = gson.toJson(loc);
-                Log.d(TAG,"jsonString= "+jsonString);
-
 
                 //Create an HTTP client
                 HttpClient client = new DefaultHttpClient();
@@ -233,8 +241,7 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
                         users = new ArrayList<User>();
 
                         users = Arrays.asList(gson.fromJson(reader, User[].class));
-
-                        ma.setRecentUsers( users);
+                        ma.setRecentUsers(users);
                         content.close();
                         Log.d(TAG, "Found "+users.size()+" users");
 
@@ -254,7 +261,19 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
     }
 
     public void handleUsersList(final List<User> users){
-
+        if (ma.mMasterUser != null) {
+            for (User user : users) {
+                if (user.id == ma.mMasterUser.id) {
+                    if (!user.song.uri.equals(ma.mMasterUser.song.uri)) {
+                        ma.mPlayer.clearQueue();
+                        ma.mPlayer.queue(user.song.uri);
+                        Log.d(TAG, user.song.name + " added to queue.");
+                    }
+                    ma.mMasterUser = user;
+                    break;
+                }
+            }
+        }
 
         ma.runOnUiThread(new Runnable() {
             @Override
@@ -298,7 +317,7 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
         float delta = mAccelCurrent - mAccelLast;
         mAccel = mAccel * 0.9f + delta; // Perform low-cut filter
         if (mAccel > ma.shakeLimit) {
-            startRandomSong(); // Call rolling() method when phone is shaken.
+            startRandomSong();
         }
     }
 

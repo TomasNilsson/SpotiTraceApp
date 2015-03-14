@@ -1,8 +1,5 @@
 package com.spotitrace.spotitrace;
 
-/**
- * Created by Johannes on 2/20/2015.
- */
 import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

@@ -17,9 +17,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 
-/**
- * Created by Johannes on 2/27/2015.
- */
+// Used for getting album image url from Spotify web API
 public class SpotifySongFetcher extends AsyncTask<Void, Void, String> {
     private static final String TAG = "SpotifySongFetcher";
     private String SERVER_URL;

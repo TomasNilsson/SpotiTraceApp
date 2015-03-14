@@ -1,6 +1,5 @@
 package com.spotitrace.spotitrace;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
@@ -16,7 +15,6 @@ import android.os.Handler;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentTransaction;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -26,8 +24,6 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ListView;
 import android.widget.TextView;
-import android.widget.Toast;
-
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMapOptions;
 import com.google.android.gms.maps.OnMapReadyCallback;
@@ -37,17 +33,14 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.protocol.HTTP;
-
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -62,8 +55,6 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
     private static GoogleMap mMap;
     private MainActivity activity;
     private GoogleMapOptions options;
-    private AlertDialog.Builder dialogBuilder;
-    private AlertDialog dialog;
     private static LatLng location;
     private MainActivity ma;
     private List<User> users;
@@ -100,6 +91,7 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
         }
         activity = (MainActivity) getActivity();
         Button button = (Button) getView().findViewById(R.id.map_button);
+        // Open Google Map in this app on button click
         button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 options = new GoogleMapOptions();
@@ -122,6 +114,7 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
                         .replace(R.id.frame_container, mMapFragment, "SpotiTraceFragment").commit();
             }
         });
+
         final SwipeRefreshLayout swipeView = (SwipeRefreshLayout) getView().findViewById(R.id.swipe_container);
         swipeView.setColorScheme(android.R.color.holo_blue_dark, android.R.color.holo_blue_light, android.R.color.holo_green_light, android.R.color.holo_green_light);
         swipeView.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
@@ -167,6 +160,7 @@ public class LocationSearchFragment extends Fragment implements OnMapReadyCallba
         mMap = map;
     }
 
+    // Add marker on long click and open confirmation dialog
     @Override
     public void onMapLongClick(LatLng point) {
         location = point;

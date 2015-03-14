@@ -33,7 +33,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class CompassSearchFragment extends Fragment implements SensorEventListener, ListHandler {
@@ -227,9 +226,7 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
                         user =gson.fromJson(reader, User.class);
                         content.close();
 
-                        if(user == null){
-                            //Something went wrong.
-                        }else{
+                        if(user != null){
                             userSingleList.clear();
                             userSingleList.add(user);
                             handleUsersList(userSingleList);

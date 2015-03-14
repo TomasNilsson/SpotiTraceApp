@@ -11,9 +11,7 @@ import android.widget.TextView;
 
 import java.util.List;
 
-/**
- * Created by Johannes on 3/12/2015.
- */
+
 public class SmallListAdapter extends ArrayAdapter<User> {
     private LayoutInflater inflater;
     private final MainActivity activity;
@@ -53,7 +51,6 @@ public class SmallListAdapter extends ArrayAdapter<User> {
             public void onClick(View v){
                 User user = users.get(position);
                 activity.handleFriend(user.id, user.friend);
-                Log.d("FRIEND VIEW", "EVENT HAPPEND!");
                 if(!user.friend) {
                     friendView.setImageResource(R.drawable.ic_star_friend);
                 }else{

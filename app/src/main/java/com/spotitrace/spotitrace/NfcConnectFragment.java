@@ -1,6 +1,5 @@
 package com.spotitrace.spotitrace;
 
-import android.content.Intent;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
@@ -36,8 +35,6 @@ import java.io.Reader;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-
-import static android.nfc.NdefRecord.createMime;
 
 public class NfcConnectFragment extends Fragment
         implements NfcAdapter.CreateNdefMessageCallback, NfcAdapter.OnNdefPushCompleteCallback, ListHandler {
@@ -114,17 +111,9 @@ public class NfcConnectFragment extends Fragment
     @Override
     public NdefMessage createNdefMessage(NfcEvent event) {
         // Include the userId of the master user in the NdefMessage
+        // Byte buffer is used to convert long to byte array
         NdefMessage msg = new NdefMessage(NdefRecord.createMime(
                 "application/com.spotitrace.spotitrace", ByteBuffer.allocate(8).putLong(activity.userId).array())
-                /**
-                 * The Android Application Record (AAR) is commented out. When a device
-                 * receives a push with an AAR in it, the application specified in the AAR
-                 * is guaranteed to run. The AAR overrides the tag dispatch system.
-                 * You can add it back in to guarantee that this
-                 * activity starts when receiving a beamed message. For now, this code
-                 * uses the tag dispatch system.
-                 */
-                //,NdefRecord.createApplicationRecord("com.example.android.beam")
         );
         return msg;
     }

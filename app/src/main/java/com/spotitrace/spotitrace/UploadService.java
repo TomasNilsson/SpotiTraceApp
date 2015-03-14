@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+// Uploads song info to SpotiTrace server
 public class UploadService extends IntentService {
     private static final String TAG = "UploadService";
     private static final String SERVER_URL = "http://spotitrace.herokuapp.com/api/songs";
@@ -42,11 +43,21 @@ public class UploadService extends IntentService {
         super("UploadService");
     }
 
+    @Override
+    protected void onHandleIntent(Intent intent) {
+        uri = intent.getStringExtra(SpotifyReceiver.EXTRA_URI);
+        name = intent.getStringExtra(SpotifyReceiver.EXTRA_NAME);
+        artist = intent.getStringExtra(SpotifyReceiver.EXTRA_ARTIST);
+
+        // Fetch album cover url with SpotifySongFetcher
+        SpotifySongFetcher SF = new SpotifySongFetcher(uri, this);
+        SF.execute();
+    }
+
+    // Called from SpotifySongFetcher when album cover url is found
     public void setUrl(String url){
         songImgUrl = url;
         Log.d(TAG,"ImgUrl Found");
-
-        //TODO: Fix fulhack.
 
         Song song = new Song(name, artist, uri, songImgUrl);
         Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
@@ -72,36 +83,4 @@ public class UploadService extends IntentService {
         }
     }
 
-
-    @Override
-    protected void onHandleIntent(Intent intent) {
-        uri = intent.getStringExtra(SpotifyReceiver.EXTRA_URI);
-        name = intent.getStringExtra(SpotifyReceiver.EXTRA_NAME);
-        artist = intent.getStringExtra(SpotifyReceiver.EXTRA_ARTIST);
-        SpotifySongFetcher SF = new SpotifySongFetcher(uri, this);
-        SF.execute();
-        // Request image_url from Spotify? Or fix this server side?
-
-        /*Song song = new Song(name, artist, album, uri, songImgUrl);
-        Gson gson = new GsonBuilder().excludeFieldsWithoutExposeAnnotation().create();
-        String jsonString = gson.toJson(song);
-
-        try {
-            //Create an HTTP client
-            HttpClient client = new DefaultHttpClient();
-            HttpPost post = new HttpPost(SERVER_URL);
-            post.setHeader("Content-Type", "application/json; charset=utf-8");
-            post.setEntity(new StringEntity(jsonString));
-            //Perform the request and check the status code
-            HttpResponse response = client.execute(post);
-            StatusLine statusLine = response.getStatusLine();
-            if (statusLine.getStatusCode() == 201) {
-                Log.d(TAG, "Upload completed");
-            } else {
-                Log.e(TAG, "Server responded with status code: " + statusLine.getStatusCode());
-            }
-        } catch (Exception ex) {
-            Log.e(TAG, "Failed to send HTTP POST request due to: " + ex);
-        }*/
-    }
 }

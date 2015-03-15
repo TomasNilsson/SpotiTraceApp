@@ -108,6 +108,11 @@ public class CompassSearchFragment extends Fragment implements SensorEventListen
     public void onResume(){
         super.onResume();
         mSensorManager.registerListener(this, mCompass, SensorManager.SENSOR_DELAY_NORMAL);
+        if(userSingleList.isEmpty()){
+            tv.setText(R.string.compass_info);
+        }else{
+            tv.setText("");
+        }
     }
 
     @Override

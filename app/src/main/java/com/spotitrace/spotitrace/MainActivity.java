@@ -26,6 +26,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -64,7 +66,7 @@ import com.spotitrace.spotitrace.adapter.NavDrawerListAdapter;
 import com.spotitrace.spotitrace.model.NavDrawerItem;
 
 public class MainActivity extends ActionBarActivity
-        implements ConnectionCallbacks, OnConnectionFailedListener, PlayerNotificationCallback, ConnectionStateCallback, FriendAdder {
+        implements ConnectionCallbacks, OnConnectionFailedListener, LocationListener, PlayerNotificationCallback, ConnectionStateCallback, FriendAdder {
     private DrawerLayout mDrawerLayout;
     private ListView mDrawerList;
     private ActionBarDrawerToggle mDrawerToggle;
@@ -107,6 +109,7 @@ public class MainActivity extends ActionBarActivity
     protected boolean newIntent = false;
     private GoogleApiClient mApiClient;
     protected Location mLastLocation;
+    private LocationRequest mLocationRequest;
     protected Player mPlayer;
     protected final String TAG="MainActivity";
     protected int shakeLimit = 13;
@@ -212,6 +215,12 @@ public class MainActivity extends ActionBarActivity
                 }
             }
         });
+
+        // Create the LocationRequest object
+        mLocationRequest = LocationRequest.create()
+                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
+                .setInterval(10 * 1000)        // 10 seconds, in milliseconds
+                .setFastestInterval(1 * 1000); // 1 second, in milliseconds
     }
 
     public void setFollowerCounter(int nbrOfFollowers){
@@ -276,6 +285,7 @@ public class MainActivity extends ActionBarActivity
     public void onStop(){
         super.onStop();
         if(mApiClient.isConnected()){
+            LocationServices.FusedLocationApi.removeLocationUpdates(mApiClient, this);
             mApiClient.disconnect();
         }
     }
@@ -285,7 +295,9 @@ public class MainActivity extends ActionBarActivity
         Spotify.destroyPlayer(this);
         super.onDestroy();
         removeMaster();
-        unregisterReceiver(spotifyReceiver);
+        if (spotifyReceiver != null) {
+            unregisterReceiver(spotifyReceiver);
+        }
     }
 
     @Override
@@ -315,7 +327,21 @@ public class MainActivity extends ActionBarActivity
 
     @Override
     public void onConnected(Bundle connectionHint){
-        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
+        Location location = LocationServices.FusedLocationApi.getLastLocation(mApiClient);
+        if (location == null) {
+            LocationServices.FusedLocationApi.requestLocationUpdates(mApiClient, mLocationRequest, this);
+        } else {
+            handleNewLocation(location);
+        }
+    }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        handleNewLocation(location);
+    }
+
+    private void handleNewLocation(Location location) {
+        mLastLocation = location;
     }
 
     @Override
@@ -444,10 +470,9 @@ public class MainActivity extends ActionBarActivity
                 // Logout from Spotify
                 mPlayer.logout();
                 AuthenticationClient.logout(this);
-                // Mark first menu item as active when activity is recreated
-                mDrawerList.performItemClick(mDrawerList, 0, mDrawerList.getItemIdAtPosition(0));
-                // Recreate the activity in order to show Spotify login again
-                this.recreate();
+                // Restart activity
+                finish();
+                startActivity(getIntent());
                 break;
             default:
                 break;
@@ -464,9 +489,6 @@ public class MainActivity extends ActionBarActivity
             mDrawerList.setSelection(position);
             setTitle(navMenuTitles[position]);
             mDrawerLayout.closeDrawer(mDrawerList);
-        } else {
-            // error in creating fragment
-            Log.e("MainActivity", "Error in creating fragment");
         }
     }
 
@@ -556,6 +578,7 @@ public class MainActivity extends ActionBarActivity
     @Override
     public void onLoginFailed(Throwable error) {
         Log.d(TAG, "Login failed");
+        Toast.makeText(this, "You are not a Spotify Premium user and can't listen to the songs in this app.", Toast.LENGTH_LONG).show();
     }
 
     @Override

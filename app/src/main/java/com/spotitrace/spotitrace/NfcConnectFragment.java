@@ -1,13 +1,18 @@
 package com.spotitrace.spotitrace;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcEvent;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.Settings;
 import android.support.v4.app.Fragment;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.util.Log;
@@ -103,6 +108,33 @@ public class NfcConnectFragment extends Fragment
             mNfcAdapter.setNdefPushMessageCallback(this, activity);
             // Register callback to listen for message-sent success
             mNfcAdapter.setOnNdefPushCompleteCallback(this, activity);
+        }
+
+        if (!mNfcAdapter.isEnabled()) {
+            AlertDialog.Builder alertbox = new AlertDialog.Builder(getActivity());
+            alertbox.setTitle("NFC");
+            alertbox.setMessage("NFC is not enabled.");
+            alertbox.setPositiveButton("Turn On", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
+                        Intent intent = new Intent(Settings.ACTION_NFC_SETTINGS);
+                        startActivity(intent);
+                    } else {
+                        Intent intent = new Intent(Settings.ACTION_WIRELESS_SETTINGS);
+                        startActivity(intent);
+                    }
+                }
+            });
+            alertbox.setNegativeButton("Close", new DialogInterface.OnClickListener() {
+
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+
+                }
+            });
+            alertbox.show();
+
         }
     }
 
